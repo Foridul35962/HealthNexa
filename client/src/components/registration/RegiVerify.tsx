@@ -16,7 +16,7 @@ const RegiVerify = ({ email, setVerified, verifyType }: {
 }) => {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
-  const { authLoading } = useSelector((state: RootState) => state.auth)
+  const { authLoading, otpLoading } = useSelector((state: RootState) => state.auth)
 
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""))
   const [resendTimer, setResendTimer] = useState(60)
@@ -35,12 +35,12 @@ const RegiVerify = ({ email, setVerified, verifyType }: {
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    
+
     try {
-      if(verifyType=== "forgetPass"){
-        await dispatch(resendOtp({ email, topic:"forgetPass" })).unwrap()
+      if (verifyType === "forgetPass") {
+        await dispatch(resendOtp({ email, topic: "forgetPass" })).unwrap()
       } else {
-        await dispatch(resendOtp({ email, topic:"registration" })).unwrap()
+        await dispatch(resendOtp({ email, topic: "registration" })).unwrap()
       }
       toast.info("A new OTP has been sent to your email.");
       setResendTimer(60);
@@ -165,16 +165,25 @@ const RegiVerify = ({ email, setVerified, verifyType }: {
             {/* Resend OTP Section */}
             <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-slate-400">Didn't receive the code?</p>
-              <button 
+              <button
                 type="button"
                 onClick={handleResendOtp}
-                disabled={resendTimer > 0}
-                className={`flex items-center space-x-2 font-bold transition-all text-sm ${
-                    resendTimer > 0 ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 cursor-pointer hover:text-blue-700'
-                }`}
+                disabled={resendTimer > 0 || otpLoading}
+                className={`flex items-center space-x-2 font-bold transition-all text-sm cursor-pointer disabled:cursor-not-allowed ${resendTimer > 0 || otpLoading ? 'text-slate-300' : 'text-blue-600 hover:text-blue-700'
+                  }`}
               >
-                <RefreshCcw size={16} />
-                <span>{resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP Now'}</span>
+                <RefreshCcw
+                  size={16}
+                  className={`${otpLoading ? 'animate-spin' : ''}`}
+                />
+                <span>
+                  {otpLoading
+                    ? 'Sending...'
+                    : resendTimer > 0
+                      ? `Resend in ${resendTimer}s`
+                      : 'Resend OTP Now'
+                  }
+                </span>
               </button>
             </div>
           </div>
