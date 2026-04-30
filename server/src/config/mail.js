@@ -123,3 +123,58 @@ export const generatePasswordResetMail = (otp) => {
     `
   };
 };
+
+export const generateHospitalVerificationMail = (otp, hospitalName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Verify Hospital Registration: ${hospitalName} | Health Nexa 🏥`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #0ea5e9, #2563eb); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Hospital Partnership</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 24px; text-align: center; font-weight: 700;">Action Required</h2>
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 30px;">
+              We received a request to add <strong>${hospitalName}</strong> to the Health Nexa network. To verify your authorization and proceed with the listing, please use the security code below:
+            </p>
+
+            <!-- OTP Box -->
+            <div style="text-align: center; margin-bottom: 35px;">
+              <div style="display: inline-block; background: #f8fafc; border: 2px dashed #cbd5e1; color: #2563eb; font-size: 40px; font-weight: 800; padding: 20px 40px; border-radius: 16px; letter-spacing: 10px;">
+                ${otp}
+              </div>
+              <p style="color: #64748b; font-size: 14px; margin-top: 15px;">
+                This verification code will expire in <strong>10 minutes</strong>.
+              </p>
+            </div>
+
+            <!-- Notice Box -->
+            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+              <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
+                <strong>Note:</strong> Verification is mandatory to ensure that only authorized representatives can manage hospital profiles and patient records.
+              </p>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Corporate Office: Healthcare Plaza, Tech City.<br>
+              If you did not initiate this request, please <a href="#" style="color: #3b82f6; text-decoration: none;">report this immediately</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};

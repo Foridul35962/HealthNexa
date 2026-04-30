@@ -4,9 +4,11 @@ import { check, validationResult } from 'express-validator'
 import Users from "../models/Users.model.js";
 import bcrypt from 'bcryptjs'
 import ApiResponse from "../helpers/ApiResponse.js";
-import { generatePasswordResetMail, generateVerificationMail, sendBrevoMail } from "../config/mail.js";
+import { generateHospitalVerificationMail, generatePasswordResetMail, generateVerificationMail, sendBrevoMail } from "../config/mail.js";
 import jwt from 'jsonwebtoken'
 import redis from "../config/redis.js";
+import Hospitals from "../models/Hospitals.model.js";
+import RequestHospitals from "../models/RequestHospitals.model.js";
 
 export const registrationPatient = [
     check('fullName')
@@ -148,7 +150,7 @@ export const verifyRegi = AsyncHandler(async (req, res) => {
     return res
         .status(201)
         .json(
-            new ApiResponse(201, user, 'user verify successfully')
+            new ApiResponse(201, {}, 'user verify successfully')
         )
 })
 
@@ -558,5 +560,221 @@ export const fetchUser = AsyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(200, user, 'user fetch successfully')
+        )
+})
+
+export const hospitalRegistrationRequest = [
+    check('fullName')
+        .trim()
+        .notEmpty()
+        .withMessage('FullName is required'),
+    check('email')
+        .trim()
+        .notEmpty()
+        .withMessage('Email is required')
+        .isEmail()
+        .withMessage('Enter a valid Email'),
+    check('phoneNumber')
+        .trim()
+        .notEmpty()
+        .withMessage('phoneNumber is required')
+        .isMobilePhone('bn-BD')
+        .withMessage('phoneNumber is unvalid'),
+    check('password')
+        .trim()
+        .notEmpty()
+        .withMessage('password is required')
+        .isLength({ min: 8 })
+        .withMessage('password must be at least 8 characters')
+        .matches(/[a-zA-Z]/)
+        .withMessage('password must contain a letter')
+        .matches(/[0-9]/)
+        .withMessage('password must contain a number'),
+    check("name")
+        .trim()
+        .notEmpty()
+        .withMessage('hospital name is required'),
+    check("address.house")
+        .trim()
+        .notEmpty()
+        .withMessage('house name is required'),
+    check("address.street")
+        .trim()
+        .notEmpty()
+        .withMessage('street name is required'),
+    check("address.city")
+        .trim()
+        .notEmpty()
+        .withMessage('city name is required'),
+    check("address.postalCode")
+        .trim()
+        .notEmpty()
+        .withMessage('postalCode is required'),
+    check("contactNumber")
+        .trim()
+        .notEmpty()
+        .withMessage('contactNumber is required')
+        .isMobilePhone('bn-BD')
+        .withMessage('contactNumber is unvalid'),
+    check("specialties")
+        .isArray({ min: 1 })
+        .withMessage("specialties must be a non-empty array"),
+    check("location.lat")
+        .notEmpty()
+        .withMessage("latitude is required"),
+    check("location.lon")
+        .notEmpty()
+        .withMessage("longitude is required"),
+
+    AsyncHandler(async (req, res) => {
+        const { fullName, email, phoneNumber, password, name, address, contactNumber, specialties, location } = req.body
+
+        const error = validationResult(req)
+        if (!error.isEmpty()) {
+            throw new ApiErrors(400, "invalid input value", error.array())
+        }
+
+        const limitKey = `authLimit:${email}`
+        const count = await redis.incr(limitKey)
+
+        if (count === 1) {
+            await redis.expire(limitKey, 1800)
+        }
+
+        if (count > 10) {
+            throw new ApiErrors(429, 'too many request')
+        }
+
+        const existingUser = await Users.findOne({ email })
+
+        if (existingUser) {
+            throw new ApiErrors(400, 'user already registered. Try hospital admin email')
+        }
+
+        const existingHospital = await Hospitals.findOne({
+            $or: [
+                { name },
+                { email },
+                { contactNumber }
+            ]
+        })
+
+        if (existingHospital) {
+            throw new ApiErrors(400, "hospital already registered")
+        }
+
+        const existingRequestHospital = await RequestHospitals.findOne({
+            $or: [
+                { name },
+                { email },
+                { contactNumber }
+            ]
+        })
+        if (existingRequestHospital) {
+            throw new ApiErrors(400, "hospital already requested. Wait for admin response")
+        }
+
+        const hashPassword = await bcrypt.hash(password, 12)
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString()
+
+        try {
+            const { subject, html } = generateHospitalVerificationMail(otp, name)
+            await sendBrevoMail(email, subject, html)
+        } catch (error) {
+            throw new ApiErrors(500, 'email send failed')
+        }
+
+        const coolDownKey = `coolDownMail:${email}`
+        await redis.set(coolDownKey, "1", "EX", 60)
+
+        const redisKey = `userRegistration:${email}`
+        await redis.set(redisKey, JSON.stringify({
+            fullName: fullName,
+            email: email,
+            phoneNumber: phoneNumber,
+            password: hashPassword,
+            name: name,
+            address: address,
+            contactNumber: contactNumber,
+            specialties: specialties,
+            location: location,
+            otp: otp,
+            verify: false
+        }), "EX", 300)
+
+        return res
+            .status(202)
+            .json(
+                new ApiResponse(202, {}, 'hospital registration request successfully')
+            )
+    })
+]
+
+export const verifyHospitalRequest = AsyncHandler(async (req, res) => {
+    const { email, otp } = req.body
+    if (!email || !otp) {
+        throw new ApiErrors(400, 'all value are required')
+    }
+
+    const limitKey = `authLimit:${email}`
+    const count = await redis.incr(limitKey)
+
+    if (count === 1) {
+        await redis.expire(limitKey, 1800)
+    }
+
+    if (count > 10) {
+        throw new ApiErrors(429, 'too many request')
+    }
+
+    const redisKey = `userRegistration:${email}`
+
+    const redisUserString = await redis.get(redisKey)
+
+    if (!redisUserString) {
+        throw new ApiErrors(400, 'otp is expired')
+    }
+
+    const redisUser = JSON.parse(redisUserString)
+
+    if (redisUser.otp !== otp) {
+        throw new ApiErrors(400, 'otp is not matched')
+    }
+
+    const hospital = await RequestHospitals.create({
+        fullName: redisUser.fullName,
+        email: redisUser.email,
+        phoneNumber: redisUser.phoneNumber,
+        password: redisUser.password,
+        name: redisUser.name,
+        address: {
+            house: redisUser.address.house,
+            street: redisUser.address.street,
+            city: redisUser.address.city,
+            postalCode: redisUser.address.postalCode
+        },
+        contactNumber: redisUser.contactNumber,
+        specialties: redisUser.specialties,
+        location: {
+            type: "Point",
+            coordinates: [
+                redisUser.location.lon,
+                redisUser.location.lat
+            ]
+        }
+    })
+
+    if (!hospital) {
+        throw new ApiErrors(500, "hospital request failed")
+    }
+
+    await redis.del(redisKey)
+    await redis.del(limitKey)
+
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(201, {}, 'hospital admin verify successfully')
         )
 })

@@ -6,6 +6,8 @@ const authRouter = express.Router()
 
 authRouter.post('/patient-registration', authController.registrationPatient)
 authRouter.post('/verify-regi', authController.verifyRegi)
+authRouter.post('/hospital-registration', authController.hospitalRegistrationRequest)
+authRouter.post('/verify-hospital', authController.verifyHospitalRequest)
 authRouter.post('/login', authController.login)
 authRouter.get('/logout', authController.logOut)
 authRouter.post('/forget-pass', authController.forgetPass)
