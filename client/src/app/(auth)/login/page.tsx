@@ -76,7 +76,16 @@ const LoginPage = () => {
 
                     {/* Password Input */}
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 ml-1">Password</label>
+                        <div className="flex items-center justify-between ml-1">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Password</label>
+                            {/* Forgot Password Link Added Here */}
+                            <Link 
+                                href="/forget-pass" 
+                                className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                            >
+                                Forgot Password?
+                            </Link>
+                        </div>
                         <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
@@ -88,7 +97,7 @@ const LoginPage = () => {
                                         hasNumber: (v) => /[0-9]/.test(v) || "Must contain a number"
                                     }
                                 })}
-                                type={"password"}
+                                type="password"
                                 placeholder="••••••••"
                                 className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                             />

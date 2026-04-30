@@ -9,7 +9,7 @@ const page = () => {
   return (
     <>
     {
-        !email ? <PatientRegister setEmail={setEmail}/> : <RegiVerify email={email}/>
+        !email ? <PatientRegister setEmail={setEmail}/> : <RegiVerify email={email} verifyType={"regiPatient"}/>
     }
     </>
   )

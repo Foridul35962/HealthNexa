@@ -1,28 +1,55 @@
 "use client"
 
 import { AppDispatch, RootState } from '@/store/store'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, SetStateAction } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { Loader2, ShieldCheck } from 'lucide-react'
+import { Loader2, ShieldCheck, RefreshCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { verifyRegi } from '@/store/slice/authSlice'
+import { resendOtp, verifyForgetPass, verifyRegi } from '@/store/slice/authSlice'
 import { toast } from 'react-toastify'
 
-const RegiVerify = ({ email }: { email: string }) => {
+const RegiVerify = ({ email, setVerified, verifyType }: {
+  email: string,
+  setVerified?: React.Dispatch<SetStateAction<boolean>>,
+  verifyType: "forgetPass" | "regiPatient"
+}) => {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
   const { authLoading } = useSelector((state: RootState) => state.auth)
 
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""))
-  const [resendTimer, setResendTimer] = useState(30)
+  const [resendTimer, setResendTimer] = useState(60)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  // Countdown timer for Resend OTP
+  // Countdown timer logic
   useEffect(() => {
-    const timer = resendTimer > 0 && setInterval(() => setResendTimer(resendTimer - 1), 1000)
+    let timer: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
     return () => { if (timer) clearInterval(timer) }
   }, [resendTimer])
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    
+    try {
+      if(verifyType=== "forgetPass"){
+        await dispatch(resendOtp({ email, topic:"forgetPass" })).unwrap()
+      } else {
+        await dispatch(resendOtp({ email, topic:"registration" })).unwrap()
+      }
+      toast.info("A new OTP has been sent to your email.");
+      setResendTimer(60);
+      setOtp(new Array(6).fill(""));
+      inputRefs.current[0]?.focus();
+    } catch (error: any) {
+      toast.error("Failed to resend OTP");
+    }
+  }
 
   const handleChange = (value: string, index: number) => {
     if (isNaN(Number(value))) return
@@ -31,7 +58,6 @@ const RegiVerify = ({ email }: { email: string }) => {
     newOtp[index] = value.substring(value.length - 1)
     setOtp(newOtp)
 
-    // Move to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -56,18 +82,24 @@ const RegiVerify = ({ email }: { email: string }) => {
     const fullOtp = otp.join("")
     if (fullOtp.length === 6) {
       try {
-        await dispatch(verifyRegi({ email, otp: fullOtp })).unwrap()
-        toast.success('Verification Successfully')
-        router.push('/login')
+        if (verifyType === "regiPatient") {
+          await dispatch(verifyRegi({ email, otp: fullOtp })).unwrap()
+          toast.success('Verification Successfully')
+          router.push('/login')
+        } else if (verifyType === "forgetPass") {
+          await dispatch(verifyForgetPass({ email, otp: fullOtp })).unwrap()
+          if (setVerified) {
+            setVerified(true)
+          }
+        }
       } catch (error: any) {
-        toast.error(error.message)
+        toast.error(error.message || "Invalid OTP")
       }
     }
   }
 
   return (
     <div className="min-h-screen bg-[#dceaf7] flex items-center justify-center p-6 font-sans">
-      {/* Background Aesthetic */}
       <div className="fixed inset-0 overflow-hidden -z-10">
         <div className="absolute top-[-10%] right-[-5%] w-100 h-100 rounded-full bg-blue-50/60 blur-[100px]" />
         <div className="absolute bottom-[-10%] left-[-5%] w-100 h-100 rounded-full bg-indigo-50/60 blur-[100px]" />
@@ -78,7 +110,6 @@ const RegiVerify = ({ email }: { email: string }) => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-120 bg-white/80 backdrop-blur-2xl p-10 md:p-14 rounded-[48px] shadow-[0_20px_60px_rgba(0,0,0,0.03)] border border-white"
       >
-        {/* Header Section */}
         <div className="flex flex-col items-center text-center mb-10">
           <div className="relative mb-6">
             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-200 rotate-3">
@@ -96,7 +127,6 @@ const RegiVerify = ({ email }: { email: string }) => {
           </p>
         </div>
 
-        {/* OTP Form */}
         <form onSubmit={handleSubmit} className="space-y-10">
           <div className="flex justify-between gap-2 md:gap-3">
             {otp.map((data, index) => (
@@ -114,26 +144,41 @@ const RegiVerify = ({ email }: { email: string }) => {
             ))}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <motion.button
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              disabled={authLoading}
+              disabled={authLoading || otp.join("").length < 6}
               type="submit"
-              className="w-full py-4 cursor-pointer disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-4"
+              className="w-full py-4 cursor-pointer disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {authLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Verifying Account...</span>
+                  <span>Verifying...</span>
                 </>
               ) : (
                 "Verify Account"
               )}
             </motion.button>
+
+            {/* Resend OTP Section */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm text-slate-400">Didn't receive the code?</p>
+              <button 
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendTimer > 0}
+                className={`flex items-center space-x-2 font-bold transition-all text-sm ${
+                    resendTimer > 0 ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 cursor-pointer hover:text-blue-700'
+                }`}
+              >
+                <RefreshCcw size={16} />
+                <span>{resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP Now'}</span>
+              </button>
+            </div>
           </div>
         </form>
-
       </motion.div>
     </div>
   )

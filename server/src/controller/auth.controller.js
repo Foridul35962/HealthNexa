@@ -513,7 +513,7 @@ export const resendOtp = [
                 email: redisValues.email,
                 role: redisValues.role,
                 phoneNumber: redisValues.phoneNumber,
-                password: redisValues.hashPassword,
+                password: redisValues.password,
                 otp: otp,
                 verify: false
             }), "EX", 300)
@@ -525,7 +525,8 @@ export const resendOtp = [
 
             await redis.set(resetRedisKey,
                 JSON.stringify({
-                    otp: otp
+                    otp: otp,
+                    verify: false
                 }),
                 "EX",
                 300
