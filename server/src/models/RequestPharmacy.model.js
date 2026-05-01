@@ -41,7 +41,7 @@ const requestPharmacySchema = new mongoose.Schema({
             required: true
         },
         postalCode: {
-            type: Number,
+            type: String,
             required: true
         }
     },
@@ -84,5 +84,5 @@ requestPharmacySchema.index(
   { expireAfterSeconds: 259200 } // 3 days
 )
 
-const requestPharmacy = mongoose.model("requestPharmacy", requestPharmacySchema)
-export default requestPharmacy
+const RequestPharmacy = mongoose.model("requestPharmacy", requestPharmacySchema)
+export default RequestPharmacy

@@ -21,7 +21,7 @@ const pharmacySchema = new mongoose.Schema({
             required: true
         },
         postalCode: {
-            type: Number,
+            type: String,
             required: true
         }
     },

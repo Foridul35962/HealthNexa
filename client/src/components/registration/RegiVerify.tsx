@@ -6,13 +6,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { Loader2, ShieldCheck, RefreshCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { resendOtp, verifyForgetPass, verifyHospital, verifyRegi } from '@/store/slice/authSlice'
+import { resendOtp, verifyForgetPass, verifyHospital, verifyPharmacy, verifyRegi } from '@/store/slice/authSlice'
 import { toast } from 'react-toastify'
 
 const RegiVerify = ({ email, setVerified, verifyType }: {
   email: string,
   setVerified?: React.Dispatch<SetStateAction<boolean>>,
-  verifyType: "forgetPass" | "regiPatient" | "regiHospital"
+  verifyType: "forgetPass" | "regiPatient" | "regiHospital" | "regiPharmacy"
 }) => {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
@@ -43,6 +43,8 @@ const RegiVerify = ({ email, setVerified, verifyType }: {
         await dispatch(resendOtp({ email, topic: "registration" })).unwrap()
       } else if(verifyType === "regiHospital"){
         await dispatch(resendOtp({ email, topic: "regiHospital" })).unwrap()
+      } else if (verifyType === "regiPharmacy") {
+        await dispatch(resendOtp({ email, topic: "regiPharmacy" })).unwrap()
       }
       toast.info("A new OTP has been sent to your email.");
       setResendTimer(60);
@@ -95,6 +97,12 @@ const RegiVerify = ({ email, setVerified, verifyType }: {
           }
         } else if (verifyType === "regiHospital") {
           await dispatch(verifyHospital({ email, otp: fullOtp })).unwrap()
+          toast.success("Successful")
+          if (setVerified) {
+            setVerified(true)
+          }
+        } else if (verifyType === "regiPharmacy") {
+          await dispatch(verifyPharmacy({email, otp: fullOtp})).unwrap()
           toast.success("Successful")
           if (setVerified) {
             setVerified(true)

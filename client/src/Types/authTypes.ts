@@ -27,6 +27,26 @@ export type RegistrationHospitalType = {
   };
 };
 
+export type RegistrationPharmacyType = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+
+  name: string;
+  address: {
+    house: string;
+    street: string;
+    city: string;
+    postalCode: string;
+  };
+  contactNumber: string;
+  location: {
+    lat: number;
+    lon: number;
+  };
+};
+
 export type otpType = {
     email: string
     otp: string
@@ -43,7 +63,7 @@ export type emailType = {
 
 export type resendOtpType = {
     email: string
-    topic: 'registration' | 'forgetPass' | 'regiHospital'
+    topic: 'registration' | 'forgetPass' | 'regiHospital' | 'regiPharmacy'
 }
 
 export type userType = {

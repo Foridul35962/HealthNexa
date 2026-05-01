@@ -1,4 +1,4 @@
-import { emailType, loginType, otpType, RegistrationHospitalType, registrationType, resendOtpType, userType } from "@/Types/authTypes";
+import { emailType, loginType, otpType, RegistrationHospitalType, RegistrationPharmacyType, registrationType, resendOtpType, userType } from "@/Types/authTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -50,6 +50,32 @@ export const verifyHospital = createAsyncThunk(
     async(data:otpType, {rejectWithValue})=>{
         try {
             const res = await axios.post(`${SERVER_URL}/verify-hospital`, data)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const registrationPharmacy = createAsyncThunk(
+    "auth/regi-pharmacy",
+    async(data:RegistrationPharmacyType, {rejectWithValue})=>{
+        try {
+            const res = await axios.post(`${SERVER_URL}/pharmacy-registration`, data)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const verifyPharmacy = createAsyncThunk(
+    "auth/verify-pharmacy",
+    async(data:otpType, {rejectWithValue})=>{
+        try {
+            const res = await axios.post(`${SERVER_URL}/verify-pharmacy`, data)
             return res.data
         } catch (error) {
             const err = error as AxiosError<any>
@@ -224,6 +250,28 @@ const authSlice = createSlice({
                 state.authLoading = false
             })
             .addCase(verifyHospital.rejected, (state) => {
+                state.authLoading = false
+            })
+        // hospital registration
+        builder
+            .addCase(registrationPharmacy.pending, (state) => {
+                state.authLoading = true
+            })
+            .addCase(registrationPharmacy.fulfilled, (state) => {
+                state.authLoading = false
+            })
+            .addCase(registrationPharmacy.rejected, (state) => {
+                state.authLoading = false
+            })
+        //verify hospital registration
+        builder
+            .addCase(verifyPharmacy.pending, (state) => {
+                state.authLoading = true
+            })
+            .addCase(verifyPharmacy.fulfilled, (state) => {
+                state.authLoading = false
+            })
+            .addCase(verifyPharmacy.rejected, (state) => {
                 state.authLoading = false
             })
         

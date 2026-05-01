@@ -178,3 +178,58 @@ export const generateHospitalVerificationMail = (otp, hospitalName) => {
     `
   };
 };
+
+export const generatePharmacyVerificationMail = (otp, pharmacyName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Verify Pharmacy Registration: ${pharmacyName} | Health Nexa 💊`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section (Green Gradient for Pharmacy/Pharma) -->
+          <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Pharmacy Partnership</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 24px; text-align: center; font-weight: 700;">Verification Required</h2>
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 30px;">
+              We received a request to register <strong>${pharmacyName}</strong> to the Health Nexa platform. Please use the following OTP code to verify your pharmacy and complete the setup:
+            </p>
+
+            <!-- OTP Box -->
+            <div style="text-align: center; margin-bottom: 35px;">
+              <div style="display: inline-block; background: #f0fdf4; border: 2px dashed #86efac; color: #059669; font-size: 40px; font-weight: 800; padding: 20px 40px; border-radius: 16px; letter-spacing: 10px;">
+                ${otp}
+              </div>
+              <p style="color: #64748b; font-size: 14px; margin-top: 15px;">
+                This code is valid for <strong>10 minutes</strong>.
+              </p>
+            </div>
+
+            <!-- Notice Box -->
+            <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+              <p style="color: #065f46; font-size: 13px; margin: 0; line-height: 1.5;">
+                <strong>Security Note:</strong> This verification ensures that only legitimate pharmacy owners can manage inventory, digital prescriptions, and medicine orders.
+              </p>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Healthcare Plaza, Tech City | Pharmacy Division<br>
+              If this wasn't you, please <a href="#" style="color: #10b981; text-decoration: none;">report this immediately</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};

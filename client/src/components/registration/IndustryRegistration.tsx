@@ -18,7 +18,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/store/store'
-import { registrationHospital } from '@/store/slice/authSlice'
+import { registrationHospital, registrationPharmacy } from '@/store/slice/authSlice'
 import { toast } from 'react-toastify'
 
 let DefaultIcon = L.icon({
@@ -39,7 +39,10 @@ const ReCenterMap = ({ lat, lon }: { lat: number; lon: number }) => {
   return null
 }
 
-const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateAction<string>> }) => {
+const IndustryRegistration = ({ setEmail, registrationType }: {
+  setEmail: React.Dispatch<SetStateAction<string>>,
+  registrationType: "Hospital" | "Pharmacy"
+}) => {
   const [step, setStep] = useState(1)
   const [suggestions, setSuggestions] = useState([])
   const [mapPos, setMapPos] = useState({ lat: 23.8103, lon: 90.4125 })
@@ -126,15 +129,20 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
   }
 
   const onSubmit = async (data: any) => {
-    const formattedData = {
-      ...data,
-      specialties: data.specialties
-        ? data.specialties.split(',').map((s: string) => s.trim()).filter((s: string) => s !== "")
-        : []
-    }
     try {
-      await dispatch(registrationHospital(formattedData)).unwrap()
-      setEmail(formattedData.email)
+      if (registrationType === "Hospital") {
+        const formattedData = {
+          ...data,
+          specialties: data.specialties
+            ? data.specialties.split(',').map((s: string) => s.trim()).filter((s: string) => s !== "")
+            : []
+        }
+        await dispatch(registrationHospital(formattedData)).unwrap()
+        setEmail(formattedData.email)
+      } else if (registrationType === "Pharmacy") {
+        await dispatch(registrationPharmacy(data)).unwrap()
+        setEmail(data.email)
+      }
     } catch (error: any) {
       toast.error(error.message)
     }
@@ -148,7 +156,7 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
         className="w-full max-w-5xl bg-white p-8 md:p-12 rounded-[40px] shadow-2xl border border-slate-100"
       >
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Hospital Connect</h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">{registrationType} Connect</h1>
           <p className="text-slate-500 mt-2">Create your professional healthcare profile</p>
         </div>
 
@@ -216,7 +224,7 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
                     onClick={async () => (await trigger(['fullName', 'email', 'phoneNumber', 'password'])) && setStep(2)}
                     className="w-full mt-4 cursor-pointer py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
                   >
-                    Hospital Details <ArrowRight size={18} />
+                    {registrationType} Details <ArrowRight size={18} />
                   </button>
                 </div>
               </motion.div>
@@ -233,10 +241,10 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
 
                     <InputField
                       icon={<Building2 size={18} />}
-                      label="Hospital Name"
-                      placeholder="Abc Hospital"
+                      label={`${registrationType} Name`}
+                      placeholder={`Abc ${registrationType}`}
                       error={errors.name?.message}
-                      register={register("name", { required: "Hospital name is required" })}
+                      register={register("name", { required: `${registrationType} name is required` })}
                     />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -289,16 +297,16 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
 
                     <InputField
                       icon={<Phone size={18} />}
-                      label="Hospital Contact Number"
+                      label={`${registrationType} Contact Number`}
                       placeholder="01712XXXXXX"
                       error={errors.contactNumber?.message}
                       register={register("contactNumber", {
-                        required: "Hospital contact number is required",
+                        required: `${registrationType} contact number is required`,
                         minLength: { value: 11, message: "Minimum 11 digits required" }
                       })}
                     />
 
-                    <InputField
+                    {registrationType === "Hospital" && <InputField
                       icon={<Stethoscope size={18} />}
                       label="Specialties (comma separated)"
                       placeholder="Cardiology, Emergency, Orthopedics"
@@ -307,7 +315,7 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
                         required: "At least one specialty is required",
                         validate: (value: string) => value.split(',').filter(s => s.trim()).length > 0 || "Please enter specialties separated by commas"
                       })}
-                    />
+                    />}
                   </div>
 
                   <div className="space-y-4">
@@ -338,7 +346,7 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
                       </MapContainer>
                     </div>
                     <p className="text-[10px] text-slate-400 italic text-center px-4">
-                      * Drag the marker and select the exact entry point of the hospital.
+                      * Drag the marker and select the exact entry point of the {registrationType}.
                     </p>
                   </div>
                 </div>
@@ -350,7 +358,7 @@ const HospitalRegistration = ({ setEmail }: { setEmail: React.Dispatch<SetStateA
                     disabled={authLoading}
                     className="flex-2 py-4 bg-blue-600 text-white cursor-pointer disabled:cursor-not-allowed rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
-                    {authLoading ? <Loader2 className="animate-spin" /> : "Register Hospital"}
+                    {authLoading ? <Loader2 className="animate-spin" /> : `Register ${registrationType}`}
                   </button>
                 </div>
               </motion.div>
@@ -387,4 +395,4 @@ const InputField = ({ icon, label, register, error, ...props }: any) => (
   </div>
 )
 
-export default HospitalRegistration;
+export default IndustryRegistration;

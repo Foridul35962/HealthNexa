@@ -11,10 +11,10 @@ const page = () => {
   return (
     <>
       {
-        !email ? <IndustryRegistration setEmail={setEmail} registrationType={"Hospital"} /> : (
+        !email ? <IndustryRegistration setEmail={setEmail} registrationType={"Pharmacy"} /> : (
           !verified ?
-            <RegiVerify email={email} verifyType={"regiHospital"} setVerified={setVerified} /> :
-            <RequestSuccess requestType='hospital' />
+            <RegiVerify email={email} verifyType={"regiPharmacy"} setVerified={setVerified} /> :
+            <RequestSuccess requestType='pharmacy' />
         )
       }
     </>
