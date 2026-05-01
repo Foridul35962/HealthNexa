@@ -534,6 +534,32 @@ export const resendOtp = [
                 300
             )
         }
+        else if (topic === "regiHospital") {
+            const redisKey = `userRegistration:${email}`
+
+            const redisValue = await redis.get(redisKey)
+            if (!redisValue) {
+                throw new ApiErrors(400, 'value is expired, try again')
+            }
+
+            const redisValues = JSON.parse(redisValue)
+
+            await redis.set(redisKey, JSON.stringify({
+                fullName: redisValues.fullName,
+                email: redisValues.email,
+                phoneNumber: redisValues.phoneNumber,
+                password: redisValues.password,
+                name: redisValues.name,
+                address: redisValues.address,
+                contactNumber: redisValues.contactNumber,
+                specialties: redisValues.specialties,
+                location: redisValues.location,
+                otp: otp,
+                verify: false
+            }), "EX", 300)
+
+            mailData = generateHospitalVerificationMail(otp, redisValues.name)
+        }
 
         const { subject, html } = mailData;
 
@@ -542,6 +568,8 @@ export const resendOtp = [
         } catch (error) {
             throw new ApiErrors(400, 'resend otp send failed')
         }
+
+        await redis.set(coolDownKey, "1", "EX", 60)
 
         return res
             .status(200)
@@ -631,6 +659,8 @@ export const hospitalRegistrationRequest = [
 
         const error = validationResult(req)
         if (!error.isEmpty()) {
+            console.log(address)
+            console.log(error)
             throw new ApiErrors(400, "invalid input value", error.array())
         }
 
@@ -759,8 +789,8 @@ export const verifyHospitalRequest = AsyncHandler(async (req, res) => {
         location: {
             type: "Point",
             coordinates: [
-                redisUser.location.lon,
-                redisUser.location.lat
+                redisUser.location.lat,
+                redisUser.location.lon
             ]
         }
     })

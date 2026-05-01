@@ -6,6 +6,27 @@ export type registrationType = {
     role: "patient"
 }
 
+export type RegistrationHospitalType = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+
+  name: string;
+  address: {
+    house: string;
+    street: string;
+    city: string;
+    postalCode: string;
+  };
+  contactNumber: string;
+  specialties: string[];
+  location: {
+    lat: number;
+    lon: number;
+  };
+};
+
 export type otpType = {
     email: string
     otp: string
@@ -22,7 +43,7 @@ export type emailType = {
 
 export type resendOtpType = {
     email: string
-    topic: 'registration' | 'forgetPass'
+    topic: 'registration' | 'forgetPass' | 'regiHospital'
 }
 
 export type userType = {
