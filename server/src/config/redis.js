@@ -22,19 +22,19 @@ const redis = new Redis(redisUrl, {
 });
 
 redis.on("connect", () => {
-  console.log("✅ [TaborLedger] Redis connected");
+  console.log("✅ [HealthNexa] Redis connected");
 });
 
 redis.on("ready", () => {
-  console.log("🚀 [TaborLedger] Redis ready at http://localhost:5540");
+  console.log("🚀 [HealthNexa] Redis ready at http://localhost:5540");
 });
 
 redis.on("error", (err) => {
-  console.error("❌ [TaborLedger] Redis error:", err);
+  console.error("❌ [HealthNexa] Redis error:", err);
 });
 
 redis.on("close", () => {
-  console.warn("⚠️ [TaborLedger] Redis connection closed");
+  console.warn("⚠️ [HealthNexa] Redis connection closed");
 });
 
 
