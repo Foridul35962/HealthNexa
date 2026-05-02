@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-white">
+    <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-white">
       {/* Background grid */}
       <div className="absolute inset-0 pointer-events-none">
         <div
@@ -32,7 +32,7 @@ export default function HeroSection() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-28 grid md:grid-cols-2 gap-16 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 grid md:grid-cols-2 gap-16 items-center">
         {/* Left */}
         <div>
 
