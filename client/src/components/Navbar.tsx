@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Activity, Menu, X, ChevronRight } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 const navLinks = [
   { label: "Symptom Checker", href: "/symptom-checker" },
@@ -15,6 +17,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useSelector((state: RootState) => state.auth)
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -28,15 +31,14 @@ export default function Navbar() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 w-full ${
-        scrolled
+      className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 w-full ${scrolled
           ? "bg-white/90 backdrop-blur-md shadow-sm border-b border-blue-50"
           : "bg-blue-50/80 backdrop-blur-md border-b border-transparent"
-      }`}
+        }`}
     >
       {/* Fixed Height: h-20 (same as your reference) */}
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group shrink-0">
           <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center group-hover:rotate-12 transition-transform shadow-md">
@@ -61,12 +63,12 @@ export default function Navbar() {
 
         {/* Desktop Auth Buttons */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link
+          {!user && <Link
             href="/login"
             className="text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors px-4"
           >
             Login
-          </Link>
+          </Link>}
           <Link
             href="/emergency"
             className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95"
