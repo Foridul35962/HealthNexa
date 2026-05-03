@@ -249,7 +249,7 @@ export const deletePharmacyRequest = AsyncHandler(async (req, res) => {
 })
 
 export const addHospital = AsyncHandler(async (req, res) => {
-    const { hospitalId } = req.params
+    const { hospitalId } = req.body
     if (!hospitalId) {
         throw new ApiErrors(400, "hospital id is required")
     }
@@ -331,7 +331,7 @@ export const addHospital = AsyncHandler(async (req, res) => {
 })
 
 export const addPharmacy = AsyncHandler(async (req, res) => {
-    const { pharmacyId } = req.params
+    const { pharmacyId } = req.body
     if (!pharmacyId) {
         throw new ApiErrors(400, "pharmacy id is required")
     }
