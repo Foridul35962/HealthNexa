@@ -233,3 +233,103 @@ export const generatePharmacyVerificationMail = (otp, pharmacyName) => {
     `
   };
 };
+
+export const generateHospitalRejectionMail = (hospitalName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Update Regarding Your Registration Request: ${hospitalName} | Health Nexa`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #475569, #1e293b); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Registration Status</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 22px; text-align: center; font-weight: 700;">Application Update</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              Thank you for your interest in joining the Health Nexa network. After carefully reviewing the registration request for <strong>${hospitalName}</strong>, our administration team has decided not to approve the application at this time.
+            </p>
+
+            <!-- Rejection Notice -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #64748b; font-size: 15px; margin: 0; line-height: 1.6;">
+                As a result, your hospital has <strong>not been added</strong> to our official database. This decision may be due to incomplete documentation, verification failure, or eligibility criteria.
+              </p>
+            </div>
+
+            <p style="color: #475569; line-height: 1.6; font-size: 15px; text-align: center;">
+              If you believe this was an error or would like to provide additional information for a future application, please feel free to reach out to our support desk.
+            </p>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Corporate Office: Healthcare Plaza, Tech City.<br>
+              For further queries, please <a href="#" style="color: #3b82f6; text-decoration: none;">contact our support team</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};
+
+export const generatePharmacyRejectionMail = (pharmacyName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Pharmacy Registration Update: ${pharmacyName} | Health Nexa`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #64748b, #334155); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Pharmacy Partnership</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 22px; text-align: center; font-weight: 700;">Application Status</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              Thank you for applying to join the Health Nexa pharmacy network. After reviewing the details provided for <strong>${pharmacyName}</strong>, our administrative team has decided not to move forward with your registration at this time.
+            </p>
+
+            <!-- Rejection Notice -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #64748b; font-size: 15px; margin: 0; line-height: 1.6;">
+                Consequently, your pharmacy has <strong>not been added</strong> to our official database. This may be due to verification requirements or internal policy guidelines.
+              </p>
+            </div>
+
+            <p style="color: #475569; line-height: 1.6; font-size: 15px; text-align: center;">
+              If you have any questions or would like to re-submit your application with updated documentation, please contact our administrative department.
+            </p>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Corporate Office: Healthcare Plaza, Tech City.<br>
+              Technical Support: <a href="#" style="color: #3b82f6; text-decoration: none;">support@healthnexa.com</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};

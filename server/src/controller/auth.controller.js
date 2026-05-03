@@ -832,6 +832,7 @@ export const verifyHospitalRequest = AsyncHandler(async (req, res) => {
 
     await redis.del(redisKey)
     await redis.del(limitKey)
+    await redis.del("Request:hospital")
 
     return res
         .status(201)
@@ -1043,6 +1044,7 @@ export const verifyPharmacyRequest = AsyncHandler(async (req, res) => {
 
     await redis.del(redisKey)
     await redis.del(limitKey)
+    await redis.del("Request:pharmacy")
 
     return res
         .status(201)
