@@ -5,7 +5,16 @@ import ApiResponse from "../helpers/ApiResponse.js";
 import AsyncHandler from "../helpers/AsyncHandler.js";
 import RequestHospitals from "../models/RequestHospitals.model.js";
 import RequestPharmacy from "../models/RequestPharmacy.model.js";
-import { generateHospitalRejectionMail, generatePharmacyRejectionMail, sendBrevoMail } from "../config/mail.js";
+import {
+    generateHospitalAcceptanceMail,
+    generateHospitalRejectionMail,
+    generatePharmacyAcceptanceMail,
+    generatePharmacyRejectionMail,
+    sendBrevoMail
+} from "../config/mail.js";
+import Hospitals from "../models/Hospitals.model.js";
+import Users from "../models/Users.model.js";
+import Pharmacy from "../models/Pharmacy.model.js";
 
 export const getAllHospitalRequest = AsyncHandler(async (req, res) => {
     const redisKey = "Request:hospital"
@@ -237,4 +246,166 @@ export const deletePharmacyRequest = AsyncHandler(async (req, res) => {
         .json(
             new ApiResponse(200, pharmacyId, "pharmacy request deleted")
         )
+})
+
+export const addHospital = AsyncHandler(async (req, res) => {
+    const { hospitalId } = req.params
+    if (!hospitalId) {
+        throw new ApiErrors(400, "hospital id is required")
+    }
+
+    if (!mongoose.isValidObjectId(hospitalId)) {
+        throw new ApiErrors(400, "invalid hospital id")
+    }
+
+    // const session = await mongoose.startSession()
+    // session.startTransaction()
+
+    try {
+        const reqHospital = await RequestHospitals.findById(hospitalId)
+        // .session(session)
+
+        if (!reqHospital) {
+            throw new ApiErrors(404, "hospital is not found in request")
+        }
+
+        const hospital = await Hospitals.create([{
+            name: reqHospital.name,
+            address: reqHospital.address,
+            contactNumber: reqHospital.contactNumber,
+            specialties: reqHospital.specialties,
+            location: reqHospital.location
+        }]
+            // , { session }
+        )
+
+        if (!hospital || hospital.length === 0) {
+            throw new ApiErrors(500, 'hospital added failed')
+        }
+
+        const user = await Users.create([{
+            fullName: reqHospital.fullName,
+            email: reqHospital.email,
+            phoneNumber: reqHospital.phoneNumber,
+            password: reqHospital.password,
+            role: "hospitalStaff",
+            staffRole: "hospitalAdmin",
+            hospitalId: hospital[0]._id
+        }]
+            // , { session }
+        )
+
+        if (!user || user.length === 0) {
+            throw new ApiErrors(500, "user created failed")
+        }
+
+        const { subject, html } = generateHospitalAcceptanceMail(hospital[0].name)
+
+        try {
+            await sendBrevoMail(user[0].email, subject, html)
+        } catch (error) {
+            console.error("Mail failed", error)
+        }
+
+        await reqHospital.deleteOne(
+            // { session }
+        )
+
+        // await session.commitTransaction()
+        // session.endSession()
+
+        await redis.del(`hospitalReq:${hospitalId}`)
+        await redis.del("Request:hospital")
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, hospitalId, "hospital added successfully")
+            )
+
+    } catch (error) {
+        // await session.abortTransaction()
+        // session.endSession()
+        throw error
+    }
+})
+
+export const addPharmacy = AsyncHandler(async (req, res) => {
+    const { pharmacyId } = req.params
+    if (!pharmacyId) {
+        throw new ApiErrors(400, "pharmacy id is required")
+    }
+
+    if (!mongoose.isValidObjectId(pharmacyId)) {
+        throw new ApiErrors(400, "invalid pharmacy id")
+    }
+
+    // const session = await mongoose.startSession()
+    // session.startTransaction()
+
+    try {
+        const reqPharmacy = await RequestPharmacy.findById(pharmacyId)
+        // .session(session)
+
+        if (!reqPharmacy) {
+            throw new ApiErrors(404, "pharmacy is not found in request")
+        }
+
+        const pharmacy = await Pharmacy.create([{
+            name: reqPharmacy.name,
+            address: reqPharmacy.address,
+            contactNumber: reqPharmacy.contactNumber,
+            location: reqPharmacy.location
+        }]
+            // , { session }
+        )
+
+        if (!pharmacy || pharmacy.length === 0) {
+            throw new ApiErrors(500, 'pharmacy added failed')
+        }
+
+        const user = await Users.create([{
+            fullName: reqPharmacy.fullName,
+            email: reqPharmacy.email,
+            phoneNumber: reqPharmacy.phoneNumber,
+            password: reqPharmacy.password,
+            role: "pharmacyOwner",
+            pharmacyId: pharmacy[0]._id
+        }]
+            // , { session }
+        )
+
+        if (!user || user.length === 0) {
+            throw new ApiErrors(500, "user created failed")
+        }
+
+        const { subject, html } = generatePharmacyAcceptanceMail(pharmacy[0].name)
+
+        try {
+            await sendBrevoMail(user[0].email, subject, html)
+        } catch (error) {
+            console.error("Mail failed", error)
+        }
+
+        await reqPharmacy.deleteOne(
+            // { session }
+        )
+
+        // await session.commitTransaction()
+        // session.endSession()
+
+        await redis.del(`pharmacyReq:${pharmacyId}`)
+        await redis.del("Request:pharmacy")
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, pharmacyId, "pharmacy added successfully")
+            )
+
+    } catch (error) {
+        // await session.abortTransaction()
+        // session.endSession()
+        throw error
+    }
 })

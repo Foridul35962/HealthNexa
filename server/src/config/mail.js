@@ -333,3 +333,104 @@ export const generatePharmacyRejectionMail = (pharmacyName) => {
     `
   };
 };
+
+export const generateHospitalAcceptanceMail = (hospitalName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Registration Approved: Welcome ${hospitalName} to Health Nexa! 🏥`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Partnership Activated</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 24px; text-align: center; font-weight: 700;">Welcome Aboard!</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              Great news! Your request to register <strong>${hospitalName}</strong> has been approved by our admin team. Your hospital is now officially live on the Health Nexa network.
+            </p>
+
+            <!-- Success Box -->
+            <div style="background-color: #ecfdf5; border: 1px solid #d1fae5; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #065f46; font-size: 15px; margin: 0 0 15px 0; font-weight: 600;">
+                You can now access your dashboard.
+              </p>
+              <p style="color: #047857; font-size: 14px; margin: 0; line-height: 1.6;">
+                Please use your registered <strong>Email</strong> and <strong>Password</strong> to log in to the admin panel and manage your records.
+              </p>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="#" style="background-color: #059669; color: #ffffff; padding: 14px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block;">Login to Dashboard</a>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Managing healthcare for a better tomorrow.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};
+
+export const generatePharmacyAcceptanceMail = (pharmacyName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Registration Successful: ${pharmacyName} is now on Health Nexa! 💊`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Partner Verified</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 24px; text-align: center; font-weight: 700;">Pharmacy Registration Done!</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              We are pleased to inform you that <strong>${pharmacyName}</strong> has been successfully added to our database. You can now start managing your inventory and services through our platform.
+            </p>
+
+            <!-- Success Box -->
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #166534; font-size: 15px; margin: 0; line-height: 1.6;">
+                Registration is complete! Please use your credentials (<strong>Email & Password</strong>) to log in and access your pharmacy admin panel.
+              </p>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="#" style="background-color: #059669; color: #ffffff; padding: 14px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block;">Go to Pharmacy Panel</a>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Connecting patients with the right medicine.
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};
