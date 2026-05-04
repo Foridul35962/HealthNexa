@@ -26,7 +26,7 @@ export const getAllHospitalRequest = AsyncHandler(async (req, res) => {
     } else {
         allHospitals = await RequestHospitals.find()
             .select("-password")
-            .sort({ createdAt: 1 })
+            .sort({ createdAt: -1 })
             .lean()
         await redis.set(redisKey,
             JSON.stringify(allHospitals),
@@ -51,7 +51,7 @@ export const getAllPharmacyRequest = AsyncHandler(async (req, res) => {
     } else {
         allPharmacy = await RequestPharmacy.find()
             .select("-password")
-            .sort({ createdAt: 1 })
+            .sort({ createdAt: -1 })
             .lean()
         await redis.set(redisKey,
             JSON.stringify(allPharmacy),
@@ -408,4 +408,66 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
         // session.endSession()
         throw error
     }
+})
+
+export const adminDashboard = AsyncHandler(async (req, res) => {
+    const redisKey = "admin:dashboard"
+    const redisValue = await redis.get(redisKey)
+    if (redisValue) {
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, JSON.parse(redisValue), "Admin dashboard data fetched successfully")
+            )
+    }
+
+    const [
+        totalUsers,
+        totalHospitals,
+        totalPharmacies,
+        pendingHospitalReq,
+        pendingPharmacyReq,
+        recentUsers,
+        recentHospitalReqs
+    ] = await Promise.all([
+        // Counts
+        Users.countDocuments(),
+        Hospitals.countDocuments(),
+        Pharmacy.countDocuments(),
+        RequestHospitals.countDocuments(),
+        RequestPharmacy.countDocuments(),
+
+        // Recent Users
+        Users.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select("fullName email role createdAt"),
+
+        // Recent Requests
+        RequestHospitals.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select("name address.city createdAt")
+    ])
+
+    const data = {
+        totalUsers,
+        totalHospitals,
+        totalPharmacies,
+        pendingHospitalReq,
+        pendingPharmacyReq,
+        recent: {
+            users: recentUsers,
+            hospitalRequests: recentHospitalReqs
+        },
+    }
+
+    await redis.set(redisKey,
+        JSON.stringify(data),
+        "EX", 300
+    )
+
+    return res.status(200).json(
+        new ApiResponse(200, data, "Admin dashboard data fetched successfully")
+    )
 })

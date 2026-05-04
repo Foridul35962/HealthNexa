@@ -1,4 +1,4 @@
-import { HospitalRequestType, PharmacyRequestType } from "@/Types/adminTypes";
+import { AdminDashboardDataType, HospitalRequestType, PharmacyRequestType } from "@/Types/adminTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -124,6 +124,21 @@ export const addPharmacy = createAsyncThunk(
     }
 )
 
+export const getAdminDashboard = createAsyncThunk(
+    "admin/dashboard",
+    async (_: null, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/dashboard`,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     adminLoading: boolean
     adminFetchLoading: boolean
@@ -132,6 +147,7 @@ interface initialStateType {
     allPharmacyRequest: PharmacyRequestType[]
     hospitalRequest: HospitalRequestType | null
     pharmacyRequest: PharmacyRequestType | null
+    adminDashboard: AdminDashboardDataType | null
 }
 
 const initialState: initialStateType = {
@@ -141,7 +157,8 @@ const initialState: initialStateType = {
     allHospitalRequest: [],
     allPharmacyRequest: [],
     hospitalRequest: null,
-    pharmacyRequest: null
+    pharmacyRequest: null,
+    adminDashboard: null
 }
 
 const adminSlice = createSlice({
@@ -264,9 +281,21 @@ const adminSlice = createSlice({
             .addCase(addPharmacy.rejected, (state) => {
                 state.adminLoading = false
             })
+        //admin dashboard
+        builder
+            .addCase(getAdminDashboard.pending, (state)=>{
+                state.adminFetchLoading = true
+            })
+            .addCase(getAdminDashboard.fulfilled, (state, action)=>{
+                state.adminFetchLoading = false
+                state.adminDashboard = action.payload.data
+            })
+            .addCase(getAdminDashboard.rejected, (state)=>{
+                state.adminFetchLoading = false
+            })
     }
 })
 
-export const {getHospitalDetails, getPharmacyDetails} = adminSlice.actions
+export const { getHospitalDetails, getPharmacyDetails } = adminSlice.actions
 
 export default adminSlice.reducer

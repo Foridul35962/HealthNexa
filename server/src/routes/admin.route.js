@@ -13,5 +13,6 @@ adminRouter.delete('/request-hospital/:hospitalId', protect, isAdmin, adminContr
 adminRouter.delete('/request-pharmacy/:pharmacyId', protect, isAdmin, adminController.deletePharmacyRequest)
 adminRouter.post('/add-hospital', protect, isAdmin, adminController.addHospital)
 adminRouter.post('/add-pharmacy', protect, isAdmin, adminController.addPharmacy)
+adminRouter.get('/dashboard', protect, isAdmin, adminController.adminDashboard)
 
 export default adminRouter
