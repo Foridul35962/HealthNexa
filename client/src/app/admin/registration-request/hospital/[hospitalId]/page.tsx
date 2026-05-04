@@ -1,16 +1,17 @@
 "use client"
 
-import { getRequestHospital } from '@/store/slice/adminSlice'
+import { addHospital, deleteRequestHospital, getRequestHospital } from '@/store/slice/adminSlice'
 import { AppDispatch, RootState } from '@/store/store'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { motion } from 'framer-motion'
-import { 
-  Building2, Mail, Phone, MapPin, 
-  Calendar, User, Activity, ArrowLeft, 
-  CheckCircle, XCircle, Clock
+import {
+  Building2, Mail, Phone, MapPin,
+  User, Activity, ArrowLeft,
+  CheckCircle, XCircle, Clock,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -33,8 +34,9 @@ const customIcon = new L.Icon({
 
 const HospitalDetailsPage = () => {
   const { hospitalId } = useParams()
-  const { adminFetchLoading, hospitalRequest } = useSelector((state: RootState) => state.admin)
+  const { adminFetchLoading, hospitalRequest, adminLoading, adminDeleteLoading } = useSelector((state: RootState) => state.admin)
   const dispatch = useDispatch<AppDispatch>()
+  const router = useRouter()
 
   useEffect(() => {
     const fetch = async () => {
@@ -48,6 +50,26 @@ const HospitalDetailsPage = () => {
       fetch()
     }
   }, [hospitalId, dispatch, hospitalRequest?._id])
+
+  const handleApprove = async () => {
+    try {
+      await dispatch(addHospital({ hospitalId: hospitalId as string })).unwrap()
+      router.push('/admin/registration-request/hospital')
+      toast.success("Hospital Approved")
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  const handleReject = async () => {
+    try {
+      await dispatch(deleteRequestHospital({ hospitalId: hospitalId as string })).unwrap()
+      router.push('/admin/registration-request/hospital')
+      toast.success("Hospital Rejected")
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
 
   if (adminFetchLoading || !hospitalRequest) {
     return (
@@ -63,31 +85,50 @@ const HospitalDetailsPage = () => {
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Top Navigation & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <Link href="/admin/hospital-requests" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-bold text-sm">
+          <Link href="/admin/registraiton-request/hospital" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-bold text-sm">
             <ArrowLeft size={18} /> Back to Requests
           </Link>
-          
+
           <div className="flex items-center gap-3">
-            <button className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-100 transition-all">
-              <XCircle size={18} /> Reject
+            <button
+              onClick={handleReject}
+              disabled={adminDeleteLoading}
+              className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-100 transition-all disabled:opacity-70"
+            >
+              {adminDeleteLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <XCircle size={18} />
+              )}
+              {adminDeleteLoading ? "Rejecting..." : "Reject"}
             </button>
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">
-              <CheckCircle size={18} /> Approve Registration
+
+            <button
+              onClick={handleApprove}
+              disabled={adminLoading}
+              className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all disabled:opacity-70"
+            >
+              {adminLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <CheckCircle size={18} />
+              )}
+              {adminLoading ? "Approving..." : "Approve Registration"}
             </button>
           </div>
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Left Column: Details (2/3 width) */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* General Info Card */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-4xl p-8 shadow-sm border border-slate-100"
             >
@@ -107,10 +148,10 @@ const HospitalDetailsPage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <DetailItem icon={<User size={20}/>} label="Admin Full Name" value={hospitalRequest.fullName} />
-                <DetailItem icon={<Mail size={20}/>} label="Official Email" value={hospitalRequest.email} />
-                <DetailItem icon={<Phone size={20}/>} label="Admin Phone" value={hospitalRequest.phoneNumber} />
-                <DetailItem icon={<Activity size={20}/>} label="Emergency Contact" value={hospitalRequest.contactNumber} />
+                <DetailItem icon={<User size={20} />} label="Admin Full Name" value={hospitalRequest.fullName} />
+                <DetailItem icon={<Mail size={20} />} label="Official Email" value={hospitalRequest.email} />
+                <DetailItem icon={<Phone size={20} />} label="Admin Phone" value={hospitalRequest.phoneNumber} />
+                <DetailItem icon={<Activity size={20} />} label="Emergency Contact" value={hospitalRequest.contactNumber} />
               </div>
             </motion.div>
 
@@ -152,36 +193,36 @@ const HospitalDetailsPage = () => {
           {/* Right Column: Map (1/3 width) */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 bg-white rounded-[40px] p-4 shadow-xl border border-slate-100 h-150 flex flex-col">
-               <div className="px-4 py-4 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800">Geographic Location</h3>
-                  <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                    <MapPin size={16} />
-                  </div>
-               </div>
+              <div className="px-4 py-4 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800">Geographic Location</h3>
+                <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                  <MapPin size={16} />
+                </div>
+              </div>
 
-               <div className="flex-1 rounded-4xl overflow-hidden border border-slate-100 relative z-0">
-                  <MapContainer 
-                    center={[hospitalRequest.location.coordinates[0], hospitalRequest.location.coordinates[1]]} 
-                    zoom={15} 
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker 
-                      position={[hospitalRequest.location.coordinates[0], hospitalRequest.location.coordinates[1]]}
-                      icon={customIcon}
-                    />
-                  </MapContainer>
-               </div>
-               
-               <div className="p-6 space-y-4">
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-400 font-bold uppercase mb-2">Coordinates</p>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-slate-600">LAT: {hospitalRequest.location.coordinates[0]}</span>
-                      <span className="text-slate-600">LON: {hospitalRequest.location.coordinates[1]}</span>
-                    </div>
+              <div className="flex-1 rounded-4xl overflow-hidden border border-slate-100 relative z-0">
+                <MapContainer
+                  center={[hospitalRequest.location.coordinates[1], hospitalRequest.location.coordinates[0]]}
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker
+                    position={[hospitalRequest.location.coordinates[1], hospitalRequest.location.coordinates[0]]}
+                    icon={customIcon}
+                  />
+                </MapContainer>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-2">Coordinates</p>
+                  <div className="flex justify-between font-mono text-sm">
+                    <span className="text-slate-600">LAT: {hospitalRequest.location.coordinates[1]}</span>
+                    <span className="text-slate-600">LON: {hospitalRequest.location.coordinates[0]}</span>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
 

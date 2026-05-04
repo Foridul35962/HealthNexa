@@ -820,8 +820,8 @@ export const verifyHospitalRequest = AsyncHandler(async (req, res) => {
         location: {
             type: "Point",
             coordinates: [
-                redisUser.location.lat,
-                redisUser.location.lon
+                redisUser.location.lon,
+                redisUser.location.lat
             ]
         }
     })
@@ -1032,8 +1032,8 @@ export const verifyPharmacyRequest = AsyncHandler(async (req, res) => {
         location: {
             type: "Point",
             coordinates: [
-                redisUser.location.lat,
-                redisUser.location.lon
+                redisUser.location.lon,
+                redisUser.location.lat
             ]
         }
     })

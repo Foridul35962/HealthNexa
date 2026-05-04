@@ -1,16 +1,17 @@
 "use client"
 
-import { getRequestPharmacy } from '@/store/slice/adminSlice'
+import { addPharmacy, deleteRequestPharmacy, getRequestPharmacy } from '@/store/slice/adminSlice'
 import { AppDispatch, RootState } from '@/store/store'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { motion } from 'framer-motion'
-import { 
-  Pill, Mail, Phone, MapPin, 
-  Calendar, User, Store, ArrowLeft, 
-  CheckCircle, XCircle, Clock, Smartphone
+import {
+  Pill, Mail, Phone, MapPin,
+  User, Store, ArrowLeft,
+  CheckCircle, XCircle, Clock, Smartphone,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -33,8 +34,9 @@ const customIcon = new L.Icon({
 
 const PharmacyDetailsPage = () => {
   const { pharmacyId } = useParams()
-  const { adminFetchLoading, pharmacyRequest } = useSelector((state: RootState) => state.admin)
+  const { adminFetchLoading, pharmacyRequest, adminDeleteLoading, adminLoading } = useSelector((state: RootState) => state.admin)
   const dispatch = useDispatch<AppDispatch>()
+  const router = useRouter()
 
   useEffect(() => {
     const fetch = async () => {
@@ -48,6 +50,26 @@ const PharmacyDetailsPage = () => {
       fetch()
     }
   }, [pharmacyId, dispatch, pharmacyRequest?._id])
+
+  const handleApprove = async () => {
+    try {
+      await dispatch(addPharmacy({ pharmacyId: pharmacyId as string })).unwrap()
+      toast.success("Pharmacy Approved")
+      router.push('/admin/registration-request/pharmacy')
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  const handleReject = async () => {
+    try {
+      await dispatch(deleteRequestPharmacy({ pharmacyId: pharmacyId as string })).unwrap()
+      toast.success("Pharmacy Rejected")
+      router.push('/admin/registration-request/pharmacy')
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
 
   if (adminFetchLoading || !pharmacyRequest) {
     return (
@@ -63,31 +85,50 @@ const PharmacyDetailsPage = () => {
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Navigation & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link href="/admin/pharmacy-requests" className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 transition-colors font-bold text-sm">
             <ArrowLeft size={18} /> Back to Pharmacy Requests
           </Link>
-          
+
           <div className="flex items-center gap-3">
-            <button className="px-6 py-3 bg-white text-red-500 border border-red-100 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-50 transition-all">
-              <XCircle size={18} /> Decline
+            <button
+              onClick={handleReject}
+              disabled={adminDeleteLoading}
+              className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center gap-2 hover:bg-red-100 transition-all disabled:opacity-70"
+            >
+              {adminDeleteLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <XCircle size={18} />
+              )}
+              {adminDeleteLoading ? "Rejecting..." : "Reject"}
             </button>
-            <button className="px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all">
-              <CheckCircle size={18} /> Approve Partner
+
+            <button
+              onClick={handleApprove}
+              disabled={adminLoading}
+              className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all disabled:opacity-70"
+            >
+              {adminLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <CheckCircle size={18} />
+              )}
+              {adminLoading ? "Approving..." : "Approve Registration"}
             </button>
           </div>
         </div>
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Details Section */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* Header Card */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-4xl p-8 shadow-sm border border-slate-100"
             >
@@ -107,83 +148,83 @@ const PharmacyDetailsPage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <InfoBlock icon={<User size={20}/>} label="Pharmacist / Admin" value={pharmacyRequest.fullName} />
-                <InfoBlock icon={<Mail size={20}/>} label="Business Email" value={pharmacyRequest.email} />
-                <InfoBlock icon={<Smartphone size={20}/>} label="Personal Number" value={pharmacyRequest.phoneNumber} />
-                <InfoBlock icon={<Phone size={20}/>} label="Pharmacy Contact" value={pharmacyRequest.contactNumber} />
+                <InfoBlock icon={<User size={20} />} label="Pharmacist / Admin" value={pharmacyRequest.fullName} />
+                <InfoBlock icon={<Mail size={20} />} label="Business Email" value={pharmacyRequest.email} />
+                <InfoBlock icon={<Smartphone size={20} />} label="Personal Number" value={pharmacyRequest.phoneNumber} />
+                <InfoBlock icon={<Phone size={20} />} label="Pharmacy Contact" value={pharmacyRequest.contactNumber} />
               </div>
             </motion.div>
 
             {/* Address Card */}
-            <motion.div 
-               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-               className="bg-white rounded-4xl p-8 shadow-sm border border-slate-100"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-white rounded-4xl p-8 shadow-sm border border-slate-100"
             >
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                        <Store size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">Pharmacy Location Details</h3>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                  <Store size={20} />
                 </div>
-                
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                        <p className="text-slate-600 font-medium leading-relaxed">
-                            <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">House/Area</span>
-                            {pharmacyRequest.address.house || 'Not Specified'}
-                        </p>
-                        <p className="text-slate-600 font-medium leading-relaxed">
-                            <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Street Address</span>
-                            {pharmacyRequest.address.street}
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-slate-50 rounded-2xl">
-                            <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">City</span>
-                            <p className="font-bold text-slate-800">{pharmacyRequest.address.city}</p>
-                        </div>
-                        <div className="p-4 bg-slate-50 rounded-2xl">
-                            <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Postal Code</span>
-                            <p className="font-bold text-slate-800">{pharmacyRequest.address.postalCode}</p>
-                        </div>
-                    </div>
+                <h3 className="text-lg font-bold text-slate-800">Pharmacy Location Details</h3>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <p className="text-slate-600 font-medium leading-relaxed">
+                    <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">House/Area</span>
+                    {pharmacyRequest.address.house || 'Not Specified'}
+                  </p>
+                  <p className="text-slate-600 font-medium leading-relaxed">
+                    <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Street Address</span>
+                    {pharmacyRequest.address.street}
+                  </p>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl">
+                    <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">City</span>
+                    <p className="font-bold text-slate-800">{pharmacyRequest.address.city}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl">
+                    <span className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Postal Code</span>
+                    <p className="font-bold text-slate-800">{pharmacyRequest.address.postalCode}</p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
 
           {/* Sticky Map Section */}
           <div className="lg:col-span-1">
             <div className="sticky top-8 bg-white rounded-[40px] p-4 shadow-xl border border-slate-100 h-145 flex flex-col">
-               <div className="px-4 py-4 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800">Verification Map</h3>
-                  <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
-                    <MapPin size={16} />
-                  </div>
-               </div>
+              <div className="px-4 py-4 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800">Verification Map</h3>
+                <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
+                  <MapPin size={16} />
+                </div>
+              </div>
 
-               <div className="flex-1 rounded-4xl overflow-hidden border border-slate-100 relative z-0">
-                  <MapContainer 
-                    center={[pharmacyRequest.location.coordinates[0], pharmacyRequest.location.coordinates[1]]} 
-                    zoom={16} 
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker 
-                      position={[pharmacyRequest.location.coordinates[0], pharmacyRequest.location.coordinates[1]]}
-                      icon={customIcon}
-                    />
-                  </MapContainer>
-               </div>
-               
-               <div className="p-5">
-                  <div className="flex items-center gap-4 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                    <div className="text-xs text-emerald-700 font-medium">
-                        Coordinates: <span className="font-mono ml-2">
-                          {pharmacyRequest.location.coordinates[0].toFixed(4)}, {pharmacyRequest.location.coordinates[1].toFixed(4)}
-                        </span>
-                    </div>
+              <div className="flex-1 rounded-4xl overflow-hidden border border-slate-100 relative z-0">
+                <MapContainer
+                  center={[pharmacyRequest.location.coordinates[1], pharmacyRequest.location.coordinates[0]]}
+                  zoom={16}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker
+                    position={[pharmacyRequest.location.coordinates[1], pharmacyRequest.location.coordinates[0]]}
+                    icon={customIcon}
+                  />
+                </MapContainer>
+              </div>
+
+              <div className="p-5">
+                <div className="flex items-center gap-4 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                  <div className="text-xs text-emerald-700 font-medium">
+                    Coordinates: <span className="font-mono ml-2">
+                      {pharmacyRequest.location.coordinates[1].toFixed(4)}, {pharmacyRequest.location.coordinates[0].toFixed(4)}
+                    </span>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
 
