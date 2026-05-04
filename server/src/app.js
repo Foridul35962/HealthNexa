@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import errorHandler from './helpers/ErrorHandler.js'
 import authRouter from './routes/auth.route.js'
 import adminRouter from './routes/admin.route.js'
+import hospitalAdminRouter from './routes/hospitalAdmin.route.js'
 
 const app = express()
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/hospital-admin', hospitalAdminRouter)
 
 app.get('/', (req, res) => {
     res.send("HealthNexa server is running ...")
