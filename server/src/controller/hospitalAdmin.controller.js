@@ -280,7 +280,7 @@ export const getDoctors = AsyncHandler(async (req, res) => {
                 path: 'userId',
                 select: '-password -image.publicId'
             })
-            .select('-chamberNumber -consultationFee -slotDuration')
+            .sort({ createdAt: -1 })
             .lean()
 
         await redis.set(
@@ -780,8 +780,9 @@ export const getHospital = AsyncHandler(async (req, res) => {
     if (redisValue) {
         hospital = JSON.parse(redisValue)
     } else {
-        hospital = await Hospitals.findById(admin.hospitalId).lean()
-        hospital.image.publicId = undefined
+        hospital = await Hospitals.findById(admin.hospitalId)
+            .select("-image.publicId")
+            .lean()
 
         if (!hospital) {
             throw new ApiErrors(404, "hospital is not found")

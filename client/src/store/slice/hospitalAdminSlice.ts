@@ -217,14 +217,14 @@ const hospitalAdminSlice = createSlice({
         //get all doctors
         builder
             .addCase(getAllDoctors.pending, (state) => {
-                state.hosAdminLoading = true
+                state.fetchLoading = true
             })
             .addCase(getAllDoctors.fulfilled, (state, action) => {
-                state.hosAdminLoading = false
+                state.fetchLoading = false
                 state.allDoctors = action.payload.data
             })
             .addCase(getAllDoctors.rejected, (state) => {
-                state.hosAdminLoading = false
+                state.fetchLoading = false
             })
         //add doctors
         builder
