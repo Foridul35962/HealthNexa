@@ -1,6 +1,6 @@
 import ApiErrors from "../helpers/ApiErrors.js";
 import AsyncHandler from "../helpers/AsyncHandler.js";
-import { check, validationResult } from 'express-validator'
+import { body, check, validationResult } from 'express-validator'
 import Users from "../models/Users.model.js";
 import bcrypt from "bcryptjs";
 import ApiResponse from "../helpers/ApiResponse.js";
@@ -9,6 +9,7 @@ import cloudinary from "../config/cloudinary.js";
 import mongoose from "mongoose";
 import Hospitals from "../models/Hospitals.model.js";
 import Doctors from "../models/Doctors.model.js";
+import redis from "../config/redis.js";
 
 export const addReceptionist = [
     check('fullName')
@@ -92,7 +93,7 @@ export const addReceptionist = [
 
         user.password = undefined
         user.image.publicId = undefined
-        const redisKey = `allReceptionist:${admin.hospitalId.toString()}`
+        const redisKey = `allReceptionist:hospitalAdmin:${admin.hospitalId.toString()}`
         await redis.del(redisKey)
 
         return res
@@ -131,7 +132,7 @@ export const deleteReceptionist = AsyncHandler(async (req, res) => {
     }
 
     await receptionist.deleteOne()
-    const redisKey = `allReceptionist:${admin.hospitalId.toString()}`
+    const redisKey = `allReceptionist:hospitalAdmin:${admin.hospitalId.toString()}`
     await redis.del(redisKey)
 
     return res
@@ -221,7 +222,7 @@ export const editReceptionist = [
             receptionist.image.publicId = undefined;
         }
 
-        const redisKey = `allReceptionist:${admin.hospitalId.toString()}`
+        const redisKey = `allReceptionist:hospitalAdmin:${admin.hospitalId.toString()}`
         await redis.del(redisKey)
 
         return res.status(200).json(
@@ -233,7 +234,7 @@ export const editReceptionist = [
 export const getAllReceptionist = AsyncHandler(async (req, res) => {
     const admin = req.user
 
-    const redisKey = `allReceptionist:${admin.hospitalId.toString()}`
+    const redisKey = `allReceptionist:hospitalAdmin:${admin.hospitalId.toString()}`
 
     const redisAllReceptionist = await redis.get(redisKey)
     let allReceptionist
@@ -266,7 +267,7 @@ export const getDoctors = AsyncHandler(async (req, res) => {
     let doctors
     const admin = req.user
 
-    const doctorKey = `allDoctors:${admin.hospitalId.toString()}`
+    const doctorKey = `allDoctors:hospitalAdmin:${admin.hospitalId.toString()}`
     const redisDoctor = await redis.get(doctorKey)
 
     if (redisDoctor) {
@@ -486,7 +487,7 @@ export const addDoctor = [
                 .populate('userId')
                 .select('-userId.password -userId.image.publicId')
 
-            const doctorKey = `allDoctors:${admin.hospitalId.toString()}`
+            const doctorKey = `allDoctors:hospitalAdmin:${admin.hospitalId.toString()}`
             await redis.del(doctorKey)
 
             return res.status(201).json(
@@ -694,7 +695,7 @@ export const editDoctor = [
                 .populate('userId')
                 .select('-userId.password -userId.image.publicId');
 
-            const doctorKey = `allDoctors:${admin.hospitalId.toString()}`
+            const doctorKey = `allDoctors:hospitalAdmin:${admin.hospitalId.toString()}`
             await redis.del(doctorKey)
 
             const redisKey = `Doctor:${doctorId}`
@@ -754,7 +755,7 @@ export const deleteDoctor = AsyncHandler(async (req, res) => {
             }
         }
 
-        const doctorKey = `allDoctors:${admin.hospitalId.toString()}`
+        const doctorKey = `allDoctors:hospitalAdmin:${admin.hospitalId.toString()}`
         await redis.del(doctorKey)
 
         const redisKey = `Doctor:${doctorId}`
@@ -769,4 +770,31 @@ export const deleteDoctor = AsyncHandler(async (req, res) => {
         // session.endSession()
         throw new ApiErrors(500, 'Doctor deletion failed')
     }
+})
+
+export const getHospital = AsyncHandler(async (req, res) => {
+    const admin = req.user
+    const redisKey = `AdminHospital:${admin.hospitalId}`
+    const redisValue = await redis.get(redisKey)
+    let hospital
+    if (redisValue) {
+        hospital = JSON.parse(redisValue)
+    } else {
+        hospital = await Hospitals.findById(admin.hospitalId).lean()
+        hospital.image.publicId = undefined
+
+        if (!hospital) {
+            throw new ApiErrors(404, "hospital is not found")
+        }
+        await redis.set(redisKey,
+            JSON.stringify(hospital),
+            "EX", 300
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, hospital, "hospital fetch successfully")
+        )
 })
