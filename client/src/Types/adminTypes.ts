@@ -12,7 +12,7 @@ type Location = {
 
 export type HospitalRequestType = {
     _id: string
-    
+
     fullName: string
     email: string
     phoneNumber: string
@@ -39,4 +39,34 @@ export type PharmacyRequestType = {
     contactNumber: string
     location: Location
     createdAt: Date
+}
+
+export interface AdminRecentUser {
+    _id: string
+    fullName: string
+    email: string
+    role: string
+    createdAt: string
+}
+
+export interface AdminRecentHospitalRequest {
+    _id: string
+    name: string
+    address: {
+        city: string
+    }
+    createdAt: string
+}
+
+export interface AdminDashboardDataType {
+    totalUsers: number
+    totalHospitals: number
+    totalPharmacies: number
+    pendingHospitalReq: number
+    pendingPharmacyReq: number
+
+    recent: {
+        users: AdminRecentUser[]
+        hospitalRequests: AdminRecentHospitalRequest[]
+    }
 }
