@@ -95,7 +95,7 @@ export const addDoctors = createAsyncThunk(
     }
 )
 
-export const editDoctors = createAsyncThunk(
+export const editDoctor = createAsyncThunk(
     "hospitalAdmin/edit-doctor",
     async ({ data, doctorId }: { data: FormData; doctorId: string }, { rejectWithValue }) => {
         try {
@@ -246,10 +246,10 @@ const hospitalAdminSlice = createSlice({
             })
         //edit doctor
         builder
-            .addCase(editDoctors.pending, (state) => {
+            .addCase(editDoctor.pending, (state) => {
                 state.hosAdminLoading = true
             })
-            .addCase(editDoctors.fulfilled, (state, action) => {
+            .addCase(editDoctor.fulfilled, (state, action) => {
                 state.hosAdminLoading = false
                 const doctor = action.payload.data
                 const idx: any = state.allDoctors?.findIndex((d) => d._id === doctor._id)
@@ -257,7 +257,7 @@ const hospitalAdminSlice = createSlice({
                     state.allDoctors[idx] = doctor
                 }
             })
-            .addCase(editDoctors.rejected, (state) => {
+            .addCase(editDoctor.rejected, (state) => {
                 state.hosAdminLoading = false
             })
         //delete doctor
