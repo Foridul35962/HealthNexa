@@ -147,6 +147,7 @@ interface initialStateType {
     editDoctors: HosAdminEditDoctorType | null
     adminHospital: HospitalType | null
     fetchLoading: boolean
+    deleteLoading: boolean
 }
 
 const initialState: initialStateType = {
@@ -155,7 +156,8 @@ const initialState: initialStateType = {
     allDoctors: [],
     editDoctors: null,
     adminHospital: null,
-    fetchLoading: false
+    fetchLoading: false,
+    deleteLoading: false
 }
 
 const hospitalAdminSlice = createSlice({
@@ -263,15 +265,15 @@ const hospitalAdminSlice = createSlice({
         //delete doctor
         builder
             .addCase(deleteDoctors.pending, (state) => {
-                state.hosAdminLoading = true
+                state.deleteLoading = true
             })
             .addCase(deleteDoctors.fulfilled, (state, action) => {
-                state.hosAdminLoading = false
+                state.deleteLoading = false
                 const doctorId = action.payload.data
                 state.allDoctors = state.allDoctors?.filter(d => d._id !== doctorId)
             })
             .addCase(deleteDoctors.rejected, (state) => {
-                state.hosAdminLoading = false
+                state.deleteLoading = false
             })
         //get hospital
         builder

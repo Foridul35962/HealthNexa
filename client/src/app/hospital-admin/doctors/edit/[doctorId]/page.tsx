@@ -3,16 +3,16 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import {
-    Plus, Trash2, Upload, User, Mail,
-    Phone, Building, Clock, CreditCard, ArrowLeft,
-    Stethoscope, CheckCircle2
+    Plus, Trash2, Upload,
+    Building, Clock, CreditCard, ArrowLeft,
+    CheckCircle2, Trash
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Link from 'next/link'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/store/store'
 import { useParams, useRouter } from 'next/navigation'
-import { editDoctor, getHospital, setEditDoctor } from '@/store/slice/hospitalAdminSlice' // updateDoctor action ta use korben
+import { deleteDoctors, editDoctor, getHospital, setEditDoctor } from '@/store/slice/hospitalAdminSlice'
 import { getDoctor } from '@/store/slice/publicSlice'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -25,7 +25,7 @@ const EditDoctorPage = () => {
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { adminHospital, hosAdminLoading, editDoctors } = useSelector((state: RootState) => state.hosAdmin)
+    const { adminHospital, hosAdminLoading, editDoctors, deleteLoading } = useSelector((state: RootState) => state.hosAdmin)
 
     const dispatch = useDispatch<AppDispatch>()
     const router = useRouter()
@@ -107,12 +107,24 @@ const EditDoctorPage = () => {
                 data.append('image', formData.image)
             }
 
-            console.log(formData)
             await dispatch(editDoctor({ data, doctorId: doctorId as string })).unwrap()
             toast.success("Doctor updated successfully!")
             router.push('/hospital-admin/doctors')
         } catch (error: any) {
             toast.error(error.message || "Update failed")
+        }
+    }
+
+    // Delete Handler
+    const handleDelete = async () => {
+        if (window.confirm("Are you sure you want to delete this doctor? This action cannot be undone.")) {
+            try {
+                await dispatch(deleteDoctors({ doctorId: doctorId as string })).unwrap()
+                toast.success("Doctor deleted successfully")
+                router.push('/hospital-admin/doctors')
+            } catch (error: any) {
+                toast.error(error.message || "Delete failed")
+            }
         }
     }
 
@@ -219,6 +231,24 @@ const EditDoctorPage = () => {
 
                         {/* Actions */}
                         <div className="flex justify-end gap-4 pt-6">
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={deleteLoading}
+                                className="bg-red-50 disabled:cursor-not-allowed text-red-600 border border-red-100 cursor-pointer disabled:opacity-50 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all"
+                            >
+                                {deleteLoading ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash size={18} /> Delete Doctor
+                                    </>
+                                )}
+                            </button>
+
                             <button
                                 type="submit"
                                 disabled={hosAdminLoading}

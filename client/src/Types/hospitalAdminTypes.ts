@@ -6,6 +6,9 @@ export type HosAdminAllDoctorType = {
     email: string;
     fullName: string;
     role: string;
+    image?:{
+      url?: string
+    }
     phoneNumber?: string;
     createdAt?: string;
     updatedAt?: string;
@@ -14,6 +17,9 @@ export type HosAdminAllDoctorType = {
   hospitalId: string;
 
   department: string;
+  chamberNumber: string
+  consultationFee: number
+  slotDuration: number
 
   schedule: {
     dayOfWeek: "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
@@ -52,4 +58,38 @@ export type HospitalType = {
 
   createdAt: string;
   updatedAt: string;
+};
+
+export type HosAdminEditDoctorType = {
+  _id: string;
+
+  userId: {
+    _id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    image?:{
+      url?: string
+    }
+    phoneNumber?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+
+  hospitalId: string;
+
+  department: string;
+
+  chamberNumber: string
+  consultationFee: number
+  slotDuration: number
+
+  schedule: {
+    dayOfWeek: "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+    startTime: string;
+    endTime: string;
+  }[];
+
+  createdAt?: string;
+  updatedAt?: string;
 };
