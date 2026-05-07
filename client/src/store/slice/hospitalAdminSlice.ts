@@ -1,5 +1,5 @@
 import { userType } from "@/Types/authTypes";
-import { HosAdminAllDoctorType, HospitalType } from "@/Types/hospitalAdminTypes";
+import { HosAdminAllDoctorType, HosAdminEditDoctorType, HospitalType } from "@/Types/hospitalAdminTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -127,7 +127,7 @@ export const deleteDoctors = createAsyncThunk(
 
 export const getHospital = createAsyncThunk(
     "hospitalAdmin/get-hospital",
-    async (_:null, { rejectWithValue }) => {
+    async (_: null, { rejectWithValue }) => {
         try {
             const res = await axios.get(`${SERVER_URL}/hospital`,
                 { withCredentials: true }
@@ -144,6 +144,7 @@ interface initialStateType {
     hosAdminLoading: boolean
     allReceptionist: userType[]
     allDoctors: HosAdminAllDoctorType[]
+    editDoctors: HosAdminEditDoctorType | null
     adminHospital: HospitalType | null
     fetchLoading: boolean
 }
@@ -152,6 +153,7 @@ const initialState: initialStateType = {
     hosAdminLoading: false,
     allReceptionist: [],
     allDoctors: [],
+    editDoctors: null,
     adminHospital: null,
     fetchLoading: false
 }
@@ -159,7 +161,11 @@ const initialState: initialStateType = {
 const hospitalAdminSlice = createSlice({
     name: "hosAdmin",
     initialState,
-    reducers: {},
+    reducers: {
+        setEditDoctor: (state, action) => {
+            state.editDoctors = action.payload
+        }
+    },
     extraReducers: (builder) => {
         //add receptionist
         builder
@@ -269,10 +275,12 @@ const hospitalAdminSlice = createSlice({
             })
         //get hospital
         builder
-            .addCase(getHospital.fulfilled, (state, action)=>{
+            .addCase(getHospital.fulfilled, (state, action) => {
                 state.adminHospital = action.payload.data
             })
     }
 })
+
+export const { setEditDoctor } = hospitalAdminSlice.actions
 
 export default hospitalAdminSlice.reducer
