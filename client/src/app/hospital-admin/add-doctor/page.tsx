@@ -63,7 +63,6 @@ const AddDoctorPage = () => {
     }
     if (!adminHospital) fetch()
   }, [dispatch, adminHospital])
-  console.log(adminHospital)
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
