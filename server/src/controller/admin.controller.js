@@ -579,7 +579,7 @@ export const deleteMedicineFromRequest = AsyncHandler(async (req, res) => {
 })
 
 export const addMedicine = AsyncHandler(async(req, res)=>{
-    const { medicineId } = req.params
+    const { medicineId } = req.body
     const admin = req.user
     if (!medicineId) {
         throw new ApiErrors(400, "medicine id is required")

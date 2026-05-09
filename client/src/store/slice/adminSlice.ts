@@ -347,67 +347,67 @@ const adminSlice = createSlice({
             })
         //admin dashboard
         builder
-            .addCase(getAdminDashboard.pending, (state)=>{
+            .addCase(getAdminDashboard.pending, (state) => {
                 state.adminFetchLoading = true
             })
-            .addCase(getAdminDashboard.fulfilled, (state, action)=>{
+            .addCase(getAdminDashboard.fulfilled, (state, action) => {
                 state.adminFetchLoading = false
                 state.adminDashboard = action.payload.data
             })
-            .addCase(getAdminDashboard.rejected, (state)=>{
+            .addCase(getAdminDashboard.rejected, (state) => {
                 state.adminFetchLoading = false
             })
         //get all request medicine
         builder
-            .addCase(getAllRequestMedicine.pending, (state)=>{
+            .addCase(getAllRequestMedicine.pending, (state) => {
                 state.adminFetchLoading = true
             })
-            .addCase(getAllRequestMedicine.fulfilled, (state, action)=>{
+            .addCase(getAllRequestMedicine.fulfilled, (state, action) => {
                 state.adminFetchLoading = false
                 state.allMedicineRequest = action.payload.data
             })
-            .addCase(getAllRequestMedicine.rejected, (state)=>{
+            .addCase(getAllRequestMedicine.rejected, (state) => {
                 state.adminFetchLoading = false
             })
         //get request medicine
         builder
-            .addCase(getRequestMedicine.pending, (state)=>{
+            .addCase(getRequestMedicine.pending, (state) => {
                 state.adminFetchLoading = true
             })
-            .addCase(getRequestMedicine.fulfilled, (state, action)=>{
+            .addCase(getRequestMedicine.fulfilled, (state, action) => {
                 state.adminFetchLoading = false
                 state.medicineRequest = action.payload.data
             })
-            .addCase(getRequestMedicine.rejected, (state)=>{
+            .addCase(getRequestMedicine.rejected, (state) => {
                 state.adminFetchLoading = false
             })
         //add medicine
         builder
-            .addCase(addMedicine.pending, (state)=>{
+            .addCase(addMedicine.pending, (state) => {
                 state.adminLoading = true
             })
-            .addCase(addMedicine.fulfilled, (state, action)=>{
+            .addCase(addMedicine.fulfilled, (state, action) => {
                 state.adminLoading = false
                 const medicineId = action.payload.data
-                state.allMedicineRequest = state.allMedicineRequest.filter((m)=>m._id !== medicineId)
+                state.allMedicineRequest = state.allMedicineRequest.filter((m) => m._id !== medicineId)
             })
-            .addCase(addMedicine.rejected, (state)=>{
+            .addCase(addMedicine.rejected, (state) => {
                 state.adminLoading = false
             })
         //delete medicine
         builder
-            .addCase(deleteRequestMedicine.pending, (state)=>{
+            .addCase(deleteRequestMedicine.pending, (state) => {
                 state.adminDeleteLoading = true
             })
-            .addCase(deleteRequestMedicine.fulfilled, (state, action)=>{
+            .addCase(deleteRequestMedicine.fulfilled, (state, action) => {
                 state.adminDeleteLoading = false
                 const medicineId = action.payload.data
-                state.allMedicineRequest = state.allMedicineRequest.filter((m)=>m._id !== medicineId)
+                state.allMedicineRequest = state.allMedicineRequest.filter((m) => m._id !== medicineId)
             })
-            .addCase(deleteRequestMedicine.rejected, (state)=>{
+            .addCase(deleteRequestMedicine.rejected, (state) => {
                 state.adminDeleteLoading = false
             })
-        
+
     }
 })
 
