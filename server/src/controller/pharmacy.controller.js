@@ -186,7 +186,11 @@ export const addMedicineInShop = [
             throw new ApiErrors(500, "medicine added failed")
         }
 
-        await redis.del(`allMediPharma:${user.pharmacyId}`)
+        const keys = await redis.keys(`allMediPharma:${user.pharmacyId}:*`)
+
+        if (keys.length > 0) {
+            await redis.del(keys)
+        }
 
         return res
             .status(201)
@@ -300,24 +304,46 @@ export const editMedicineInShop = [
     })
 ];
 
-export const getAllMedicine = AsyncHandler(async(req, res)=>{
-    const user = req.user
-    const redisKey = `allMediPharma:${user.pharmacyId}`
-    let allMedi
-    const redisAllMedi = await redis.get(redisKey)
+export const getAllMedicine = AsyncHandler(async (req, res) => {
+    const user = req.user;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const redisKey = `allMediPharma:${user.pharmacyId}:page:${page}:limit:${limit}`;
+
+    let allMedi;
+
+    const redisAllMedi = await redis.get(redisKey);
+
     if (redisAllMedi) {
-        allMedi = JSON.parse(allMedi)
+        allMedi = JSON.parse(redisAllMedi);
     } else {
-        allMedi = await PharmacyMedicines.find({pharmacyId: user.pharmacyId})
-        await redis.set(redisKey,
-            JSON.stringify(allMedi),
-            "EX", 300
-        )
+        const [data, total] = await Promise.all([
+            PharmacyMedicines.find({ pharmacyId: user.pharmacyId })
+                .populate("medicineId")
+                .skip(skip)
+                .limit(limit)
+                .sort({ createdAt: -1 }),
+
+            PharmacyMedicines.countDocuments({ pharmacyId: user.pharmacyId })
+        ]);
+
+        allMedi = {
+            data,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
+
+        await redis.set(redisKey, JSON.stringify(allMedi), "EX", 300);
     }
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, allMedi, "all medicine fetch successfull")
-        )
-})
+    return res.status(200).json(
+        new ApiResponse(200, allMedi, "all medicine fetch successful")
+    );
+});
