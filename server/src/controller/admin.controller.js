@@ -8,6 +8,8 @@ import RequestPharmacy from "../models/RequestPharmacy.model.js";
 import {
     generateHospitalAcceptanceMail,
     generateHospitalRejectionMail,
+    generateMedicineApprovalMail,
+    generateMedicineRejectionMail,
     generatePharmacyAcceptanceMail,
     generatePharmacyRejectionMail,
     sendBrevoMail
@@ -15,6 +17,8 @@ import {
 import Hospitals from "../models/Hospitals.model.js";
 import Users from "../models/Users.model.js";
 import Pharmacy from "../models/Pharmacy.model.js";
+import RequestMedicines from "../models/RequestMedicine.model.js";
+import Medicines from "../models/Medicine.model.js";
 
 export const getAllHospitalRequest = AsyncHandler(async (req, res) => {
     const redisKey = "Request:hospital"
@@ -470,4 +474,177 @@ export const adminDashboard = AsyncHandler(async (req, res) => {
     return res.status(200).json(
         new ApiResponse(200, data, "Admin dashboard data fetched successfully")
     )
+})
+
+export const getAllMedicineRequest = AsyncHandler(async (req, res) => {
+    const redisKey = "Request:medicine"
+
+    let allMedicine
+    const redisMedicine = await redis.get(redisKey)
+    if (redisMedicine) {
+        allMedicine = JSON.parse(redisMedicine)
+    } else {
+        allMedicine = await RequestMedicines.find()
+        await redis.set(redisKey,
+            JSON.stringify(allMedicine),
+            "EX", 300
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, allMedicine, "all request medicine fetch successfully")
+        )
+})
+
+export const getMedicineFromRequest = AsyncHandler(async (req, res) => {
+    const { medicineId } = req.params
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    if (!mongoose.isValidObjectId(medicineId)) {
+        throw new ApiErrors(400, "invalid medicineId")
+    }
+
+    const redisKey = `medicineReq:${medicineId}`
+    let medicine
+
+    const redisMedicine = await redis.get(redisKey)
+    if (redisMedicine) {
+        medicine = JSON.parse(redisMedicine)
+    } else {
+        medicine = await RequestMedicines.findById(medicineId)
+            .populate({
+                path: "addedBy",
+                select: "-password -role -image.publicId"
+            })
+        if (!medicine) {
+            throw new ApiErrors(404, "medicine is not found from request")
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(medicine),
+            "EX", 300
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, medicine, "medicine fetch successfully")
+        )
+})
+
+export const deleteMedicineFromRequest = AsyncHandler(async (req, res) => {
+    const { medicineId } = req.params
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    if (!mongoose.isValidObjectId(medicineId)) {
+        throw new ApiErrors(400, "invalid medicineId")
+    }
+
+    const redisKey = `medicineReq:${medicineId}`
+
+    const medicine = await RequestMedicines.findById(medicineId)
+        .populate({
+            path: "addedBy",
+            select: "email fullName"
+        })
+
+    if (!medicine) {
+        throw new ApiErrors(404, "medicine is not found from request")
+    }
+
+    const { subject, html } = generateMedicineRejectionMail(medicine.addedBy.fullName, medicine.name)
+
+    try {
+        await sendBrevoMail(medicine.addedBy.email, subject, html)
+    } catch (error) {
+        throw new ApiErrors(500, "mail send failed")
+    }
+
+    await medicine.deleteOne()
+    await redis.del(redisKey)
+    await redis.del(`Request:medicine`)
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, medicineId, "medicine delete from request successfully")
+        )
+})
+
+export const addMedicine = AsyncHandler(async(req, res)=>{
+    const { medicineId } = req.params
+    const admin = req.user
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    if (!mongoose.isValidObjectId(medicineId)) {
+        throw new ApiErrors(400, "invalid medicineId")
+    }
+
+    const redisKey = `medicineReq:${medicineId}`
+    let medicine
+
+    const redisMedicine = await redis.get(redisKey)
+    if (redisMedicine) {
+        medicine = JSON.parse(redisMedicine)
+    } else {
+        medicine = await RequestMedicines.findById(medicineId)
+            .populate({
+                path: "addedBy",
+                select: "-password -role -image.publicId"
+            })
+        if (!medicine) {
+            throw new ApiErrors(404, "medicine is not found from request")
+        }
+    }
+
+    const appoveMedi = await Medicines.create({
+        name: medicine.name,
+        genericName: medicine.genericName,
+        brandName: medicine.brandName,
+        manufacturer: medicine.manufacturer,
+        medicineType: medicine.medicineType,
+        strength: medicine.strength,
+        category: medicine.category,
+        description: medicine.description,
+        requiresPrescription: medicine.requiresPrescription,
+        sideEffects: medicine.sideEffects,
+        addedBy: medicine.addedBy._id,
+        approvedBy: admin._id
+    })
+
+    if (!appoveMedi) {
+        throw new ApiErrors(500, "medicine added failed")
+    }
+
+    const {subject, html} = generateMedicineApprovalMail(medicine.addedBy.fullName, medicine.name)
+
+    try {
+        await sendBrevoMail(medicine.addedBy.email, subject, html)
+    } catch (error) {
+        throw new ApiErrors(500, "mail send failed")
+    }
+
+    if (redisMedicine) {
+        await RequestMedicines.findByIdAndDelete(medicineId)
+        await redis.del(redisKey)
+    } else {
+        await medicine.deleteOne()
+    }
+
+    await redis.del(`Request:medicine`)
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, appoveMedi, "medicine add successfully")
+        )
 })

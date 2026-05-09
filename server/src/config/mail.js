@@ -434,3 +434,109 @@ export const generatePharmacyAcceptanceMail = (pharmacyName) => {
     `
   };
 };
+
+export const generateMedicineRejectionMail = (pharmacyOwnerName, medicineName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Medicine Submission Update: ${medicineName} | Health Nexa`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Inventory Update</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <!-- Content Section -->
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 22px; text-align: center; font-weight: 700;">Submission Declined</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              Hello <strong>${pharmacyOwnerName}</strong>, thank you for submitting a new medicine request. After careful review, our administrative team has decided not to approve the following medicine for our database at this time:
+            </p>
+
+            <!-- Medicine Detail -->
+            <div style="background-color: #fef2f2; border: 1px solid #fee2e2; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #b91c1c; font-size: 18px; margin: 0; font-weight: 700;">
+                ${medicineName}
+              </p>
+              <p style="color: #7f1d1d; font-size: 14px; margin-top: 8px; opacity: 0.8;">
+                Status: Rejected from Database
+              </p>
+            </div>
+
+            <p style="color: #475569; line-height: 1.6; font-size: 15px; text-align: center;">
+              This decision is usually based on incomplete data, quality standards, or duplication in our existing records. If you believe this was an error or have additional certification for <strong>${medicineName}</strong>, please contact our support team.
+            </p>
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Corporate Office: Healthcare Plaza, Tech City.<br>
+              Technical Support: <a href="mailto:support@healthnexa.com" style="color: #3b82f6; text-decoration: none;">support@healthnexa.com</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};
+
+export const generateMedicineApprovalMail = (pharmacyOwnerName, medicineName) => {
+  const currentYear = new Date().getFullYear();
+  return {
+    subject: `Medicine Approved: ${medicineName} is now Live! | Health Nexa`,
+    html: `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 40px 10px; min-height: 100%;">
+        <div style="max-width: 580px; margin: auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+          
+          <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 45px 20px; text-align: center;">
+            <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; margin-bottom: 15px;">
+               <span style="color: #ffffff; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Update Successful</span>
+            </div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">Health Nexa</h1>
+          </div>
+
+          <div style="padding: 45px 35px;">
+            <h2 style="color: #1e293b; margin: 0 0 12px; font-size: 22px; text-align: center; font-weight: 700;">Medicine Approved!</h2>
+            
+            <p style="color: #475569; line-height: 1.6; font-size: 16px; text-align: center; margin-bottom: 25px;">
+              Great news! The medicine submission from <strong>${pharmacyOwnerName}</strong> has been reviewed and officially approved by our administrative team.
+            </p>
+
+            <div style="background-color: #f0fdf4; border: 1px solid #dcfce7; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="color: #15803d; font-size: 18px; margin: 0; font-weight: 700;">
+                ${medicineName}
+              </p>
+              <p style="color: #166534; font-size: 14px; margin-top: 8px; opacity: 0.9;">
+                Status: Added to Official Database
+              </p>
+            </div>
+
+            <p style="color: #475569; line-height: 1.6; font-size: 15px; text-align: center;">
+              This medicine is now visible in our global database and available for your inventory management. Thank you for helping us maintain an accurate and high-quality healthcare network.
+            </p>
+            
+            <div style="text-align: center; margin-top: 30px;">
+               <a href="#" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; font-weight: 600; border-radius: 8px; display: inline-block;">View Dashboard</a>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.8;">
+              &copy; ${currentYear} Health Nexa Inc. <br>
+              Corporate Office: Healthcare Plaza, Tech City.<br>
+              Technical Support: <a href="mailto:support@healthnexa.com" style="color: #3b82f6; text-decoration: none;">support@healthnexa.com</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  };
+};
