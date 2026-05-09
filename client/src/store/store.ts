@@ -3,13 +3,15 @@ import authSlice from './slice/authSlice'
 import adminSlice from './slice/adminSlice'
 import hospitalAdminSlice from './slice/hospitalAdminSlice'
 import publicSlice from './slice/publicSlice'
+import pharmacySlice from './slice/pharmacySlice'
 
 const store = configureStore({
     reducer: {
         auth: authSlice,
         admin: adminSlice,
         hosAdmin: hospitalAdminSlice,
-        publicSlice: publicSlice,
+        public: publicSlice,
+        pharmacy: pharmacySlice,
     }
 })
 

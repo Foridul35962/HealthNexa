@@ -70,3 +70,65 @@ export interface AdminDashboardDataType {
         hospitalRequests: AdminRecentHospitalRequest[]
     }
 }
+
+export interface AllMedicineRequestType {
+    _id: string
+    name: string
+    genericName: string
+    brandName?: string
+    manufacturer: string
+    medicineType:
+    | "tablet"
+    | "capsule"
+    | "syrup"
+    | "injection"
+    | "cream"
+    | "ointment"
+    | "drops"
+    | "inhaler"
+    strength: string
+    category?: string
+    description?: string
+    requiresPrescription: boolean
+    sideEffects: string[]
+    addedBy: string
+    createdAt: string
+    updatedAt: string
+}
+export interface MedicineRequestType {
+    _id: string
+    name: string
+    genericName: string
+    brandName?: string
+    manufacturer: string
+    medicineType:
+    | "tablet"
+    | "capsule"
+    | "syrup"
+    | "injection"
+    | "cream"
+    | "ointment"
+    | "drops"
+    | "inhaler"
+    strength: string
+    category?: string
+    description?: string
+    requiresPrescription: boolean
+    sideEffects: string[]
+    addedBy: addedByType
+    createdAt: string
+    updatedAt: string
+}
+
+export type addedByType = {
+    _id: string
+    fullName: string
+    email: string
+    phoneNumber: string
+    image?: {
+        url?: string
+    }
+    pharmacyId: string
+    createdAt: string
+    updatedAt: string
+}

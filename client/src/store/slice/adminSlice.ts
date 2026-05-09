@@ -1,4 +1,4 @@
-import { AdminDashboardDataType, HospitalRequestType, PharmacyRequestType } from "@/Types/adminTypes";
+import { AdminDashboardDataType, AllMedicineRequestType, HospitalRequestType, MedicineRequestType, PharmacyRequestType } from "@/Types/adminTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -139,14 +139,76 @@ export const getAdminDashboard = createAsyncThunk(
     }
 )
 
+export const getAllRequestMedicine = createAsyncThunk(
+    "admin/getAllReqMedi",
+    async (_: null, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/request-medicine`,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const getRequestMedicine = createAsyncThunk(
+    "admin/getReqMedi",
+    async ({ medicineId }: { medicineId: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/request-medicine/${medicineId}`,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const deleteRequestMedicine = createAsyncThunk(
+    "admin/deleteReqMedi",
+    async ({ medicineId }: { medicineId: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.delete(`${SERVER_URL}/request-medicine/${medicineId}`,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const addMedicine = createAsyncThunk(
+    "admin/addMedi",
+    async (data: { medicineId: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.post(`${SERVER_URL}/add-medicine`, data,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     adminLoading: boolean
     adminFetchLoading: boolean
     adminDeleteLoading: boolean
     allHospitalRequest: HospitalRequestType[]
     allPharmacyRequest: PharmacyRequestType[]
+    allMedicineRequest: AllMedicineRequestType[]
     hospitalRequest: HospitalRequestType | null
     pharmacyRequest: PharmacyRequestType | null
+    medicineRequest: MedicineRequestType | null
     adminDashboard: AdminDashboardDataType | null
 }
 
@@ -156,7 +218,9 @@ const initialState: initialStateType = {
     adminDeleteLoading: false,
     allHospitalRequest: [],
     allPharmacyRequest: [],
+    allMedicineRequest: [],
     hospitalRequest: null,
+    medicineRequest: null,
     pharmacyRequest: null,
     adminDashboard: null
 }
@@ -293,6 +357,57 @@ const adminSlice = createSlice({
             .addCase(getAdminDashboard.rejected, (state)=>{
                 state.adminFetchLoading = false
             })
+        //get all request medicine
+        builder
+            .addCase(getAllRequestMedicine.pending, (state)=>{
+                state.adminFetchLoading = true
+            })
+            .addCase(getAllRequestMedicine.fulfilled, (state, action)=>{
+                state.adminFetchLoading = false
+                state.allMedicineRequest = action.payload.data
+            })
+            .addCase(getAllRequestMedicine.rejected, (state)=>{
+                state.adminFetchLoading = false
+            })
+        //get request medicine
+        builder
+            .addCase(getRequestMedicine.pending, (state)=>{
+                state.adminFetchLoading = true
+            })
+            .addCase(getRequestMedicine.fulfilled, (state, action)=>{
+                state.adminFetchLoading = false
+                state.medicineRequest = action.payload.data
+            })
+            .addCase(getRequestMedicine.rejected, (state)=>{
+                state.adminFetchLoading = false
+            })
+        //add medicine
+        builder
+            .addCase(addMedicine.pending, (state)=>{
+                state.adminLoading = true
+            })
+            .addCase(addMedicine.fulfilled, (state, action)=>{
+                state.adminLoading = false
+                const medicineId = action.payload.data
+                state.allMedicineRequest = state.allMedicineRequest.filter((m)=>m._id !== medicineId)
+            })
+            .addCase(addMedicine.rejected, (state)=>{
+                state.adminLoading = false
+            })
+        //delete medicine
+        builder
+            .addCase(deleteRequestMedicine.pending, (state)=>{
+                state.adminDeleteLoading = true
+            })
+            .addCase(deleteRequestMedicine.fulfilled, (state, action)=>{
+                state.adminDeleteLoading = false
+                const medicineId = action.payload.data
+                state.allMedicineRequest = state.allMedicineRequest.filter((m)=>m._id !== medicineId)
+            })
+            .addCase(deleteRequestMedicine.rejected, (state)=>{
+                state.adminDeleteLoading = false
+            })
+        
     }
 })
 
