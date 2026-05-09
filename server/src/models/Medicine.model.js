@@ -5,21 +5,24 @@ const medicineSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        unique: true
+        lowercase: true
     },
     genericName: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        lowercase: true
     },
     brandName: {
         type: String,
-        trim: true
+        trim: true,
+        lowercase: true
     },
     manufacturer: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        lowercase: true
     },
     medicineType: {
         type: String,
@@ -37,14 +40,16 @@ const medicineSchema = new mongoose.Schema({
     },
     strength: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true
         // Example:
         // 500mg
         // 250mg/5ml
     },
     category: {
         type: String,
-        trim: true
+        trim: true,
+        lowercase: true
         // antibiotic
         // painkiller
         // antihistamine
@@ -60,10 +65,6 @@ const medicineSchema = new mongoose.Schema({
     sideEffects: [{
         type: String
     }],
-    isApproved: {
-        type: Boolean,
-        default: false
-    },
     addedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Users"
@@ -73,6 +74,11 @@ const medicineSchema = new mongoose.Schema({
         ref: "Users"
     }
 }, { timestamps: true });
+
+medicineSchema.index(
+    { name: 1, strength: 1 },
+    { unique: true }
+)
 
 const Medicines = mongoose.model("Medicines", medicineSchema);
 

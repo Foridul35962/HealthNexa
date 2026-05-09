@@ -28,14 +28,6 @@ const pharmacyMedicineSchema = new mongoose.Schema({
         type: Number,
         min: 0
     },
-    expiryDate: {
-        type: Date,
-        required: true
-    },
-    batchNumber: {
-        type: String,
-        trim: true
-    },
     isAvailable: {
         type: Boolean,
         default: true
