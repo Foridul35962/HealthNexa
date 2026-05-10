@@ -17,7 +17,7 @@ export interface pharmacyMedicineType {
     medicineId: string
     stock: number
     price: number
-    discountPrice: number
+    discountPrice?: number
     isAvailable: boolean
 }
 
