@@ -1,4 +1,4 @@
-import { AllMedicineRequestType } from "./adminTypes"
+import { medicineNameType } from "./publicTypes"
 
 export interface requestMedicineType {
     name: string
@@ -33,7 +33,12 @@ export interface PharmacyMedicineType {
 
     pharmacyId: string
 
-    medicineId: AllMedicineRequestType
+    medicineId: {
+        name: string
+        genericName: string
+        medicineType: "tablet" | "capsule" | "syrup" | "injection" | "cream" | "ointment" | "drops" | "inhaler"
+        strength: string
+    }
 
     stock: number
     price: number

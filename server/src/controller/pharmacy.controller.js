@@ -322,7 +322,10 @@ export const getAllMedicine = AsyncHandler(async (req, res) => {
     } else {
         const [data, total] = await Promise.all([
             PharmacyMedicines.find({ pharmacyId: user.pharmacyId })
-                .populate("medicineId")
+                .populate({
+                    path: "medicineId",
+                    select:"_id name genericName strength medicineType"
+                })
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 }),
