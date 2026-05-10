@@ -1,4 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
+import { medicineNameType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -17,32 +18,52 @@ export const getDoctor = createAsyncThunk(
     }
 )
 
-interface initialStateType{
+export const getMedicineNames = createAsyncThunk(
+    "public/getMedicineNames",
+    async ({medicineName}: { medicineName: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/medicineName/${medicineName}`)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+interface initialStateType {
     fetchLoading: boolean
     doctor: HosAdminEditDoctorType | null
+    medicineName: medicineNameType[]
 }
 
-const initialState:initialStateType ={
+const initialState: initialStateType = {
     fetchLoading: false,
-    doctor: null
+    doctor: null,
+    medicineName: []
 }
 
 const publicSlice = createSlice({
     name: "public",
     initialState,
-    reducers:{},
-    extraReducers: (builder)=>{
+    reducers: {},
+    extraReducers: (builder) => {
         //get doctor
         builder
-            .addCase(getDoctor.pending, (state)=>{
+            .addCase(getDoctor.pending, (state) => {
                 state.fetchLoading = true
             })
-            .addCase(getDoctor.fulfilled, (state,action)=>{
+            .addCase(getDoctor.fulfilled, (state, action) => {
                 state.fetchLoading = false
                 state.doctor = action.payload.data
             })
-            .addCase(getDoctor.rejected, (state)=>{
+            .addCase(getDoctor.rejected, (state) => {
                 state.fetchLoading = false
+            })
+        //medicine name
+        builder
+            .addCase(getMedicineNames.fulfilled, (state, action) => {
+                state.medicineName = action.payload.data
             })
     }
 })
