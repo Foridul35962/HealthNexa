@@ -294,6 +294,8 @@ export const editMedicineInShop = [
             throw new ApiErrors(500, "failed to update medicine");
         }
 
+        await redis.del(`shopMedicine:${user.pharmacyId}:${pharMediId}`)
+
         return res.status(200).json(
             new ApiResponse(
                 200,
@@ -374,3 +376,45 @@ export const getAllMedicine = AsyncHandler(async (req, res) => {
         new ApiResponse(200, allMedi, "all medicine fetch successful")
     );
 });
+
+export const getMedicineFromShop = AsyncHandler(async (req, res) => {
+    const user = req.user
+    const { medicineId } = req.params
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    const redisKey = `shopMedicine:${user.pharmacyId}:${medicineId}`
+    let medicine
+
+    const redisMedicine = await redis.get(redisKey)
+    if (redisMedicine) {
+        medicine = JSON.parse(redisMedicine)
+    } else {
+        medicine = await PharmacyMedicines.findOne({
+            _id: medicineId,
+            pharmacyId: user.pharmacyId
+        })
+            .populate({
+                path: "medicineId",
+                select: "_id name genericName medicineType strength"
+            })
+            .select("stock price discountPrice isAvailable")
+            .lean()
+
+        if (!medicine) {
+            throw new ApiErrors(404, "medicine not found")
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(medicine),
+            "EX", 300
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, medicine, "medicine fetch done")
+        )
+})

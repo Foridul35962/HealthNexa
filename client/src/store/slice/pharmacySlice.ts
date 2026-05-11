@@ -1,4 +1,4 @@
-import { editPharmacyMedicineType, GetAllShopMedicineType, pharmacyMedicineType, requestMedicineType } from "@/Types/pharmacyTypes";
+import { editPharmacyMedicineType, GetAllShopMedicineType, PharmacyMedicineType, pharmacyMedicineType, requestMedicineType } from "@/Types/pharmacyTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -72,10 +72,26 @@ export const getAllShopMedicine = createAsyncThunk(
     }
 )
 
+export const getPharMedi = createAsyncThunk(
+    "pharmacy/pharmedi",
+    async({medicineId}:{medicineId:string},{rejectWithValue})=>{
+        try {
+            const res = await axios.get(`${SERVER_URL}/pharMedi/${medicineId}`,{
+                withCredentials: true
+            })
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface InitialStateType {
     pharmacyFetchLoading: boolean
     pharmacyLoading: boolean
     allShopMedicine: GetAllShopMedicineType
+    editPharMedi:PharmacyMedicineType | null
 }
 
 const initialState: InitialStateType = {
@@ -89,13 +105,18 @@ const initialState: InitialStateType = {
             limit: 10,
             totalPages: 0
         }
-    }
+    },
+    editPharMedi: null
 }
 
 const pharmacySlice = createSlice({
     name: "pharmacy",
     initialState,
-    reducers: {},
+    reducers: {
+        addEditMediPhar: (state, action)=>{
+            state.editPharMedi = action.payload
+        }
+    },
     extraReducers: (builder) => {
         //request medicine
         builder
@@ -153,7 +174,21 @@ const pharmacySlice = createSlice({
             .addCase(getAllShopMedicine.rejected, (state) => {
                 state.pharmacyFetchLoading = false
             })
+        //get medicineShop
+        builder
+            .addCase(getPharMedi.pending, (state) => {
+                state.pharmacyFetchLoading = true
+            })
+            .addCase(getPharMedi.fulfilled, (state, action) => {
+                state.pharmacyFetchLoading = false
+                state.editPharMedi = action.payload.data
+            })
+            .addCase(getPharMedi.rejected, (state) => {
+                state.pharmacyFetchLoading = false
+            })
     }
 })
+
+export const {addEditMediPhar} = pharmacySlice.actions
 
 export default pharmacySlice.reducer

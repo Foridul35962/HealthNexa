@@ -9,5 +9,6 @@ pharmacyRouter.post("/req-medicine", protect, isPharmacyOwner, controller.medici
 pharmacyRouter.post("/add-medishop", protect, isPharmacyOwner, controller.addMedicineInShop)
 pharmacyRouter.patch("/edit-medishop/:pharMediId", protect, isPharmacyOwner, controller.editMedicineInShop)
 pharmacyRouter.get("/all-pharMedi", protect, isPharmacyOwner, controller.getAllMedicine)
+pharmacyRouter.get("/pharMedi/:medicineId", protect, isPharmacyOwner, controller.getMedicineFromShop)
 
 export default pharmacyRouter
