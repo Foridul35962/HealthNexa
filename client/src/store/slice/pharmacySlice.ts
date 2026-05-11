@@ -51,9 +51,17 @@ export const editMedicineToShop = createAsyncThunk(
 
 export const getAllShopMedicine = createAsyncThunk(
     "pharmacy/getAllShopMedi",
-    async ({ page, limit }: { page: string, limit: string }, { rejectWithValue }) => {
+    async ({ page, limit, search }: { page: string, limit: string, search?: string }, { rejectWithValue }) => {
         try {
-            const res = await axios.get(`${SERVER_URL}/all-pharMedi?page=${page}&limit=${limit}`,
+            const params = new URLSearchParams({
+                page,
+                limit,
+            })
+
+            if (search?.trim()) {
+                params.append("search", search.trim())
+            }
+            const res = await axios.get(`${SERVER_URL}/all-pharMedi?${params.toString()}`,
                 { withCredentials: true }
             )
             return res.data
@@ -133,7 +141,7 @@ const pharmacySlice = createSlice({
             .addCase(editMedicineToShop.rejected, (state) => {
                 state.pharmacyLoading = false
             })
-            //get all medicine shop
+        //get all medicine shop
         builder
             .addCase(getAllShopMedicine.pending, (state) => {
                 state.pharmacyFetchLoading = true

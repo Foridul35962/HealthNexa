@@ -311,7 +311,9 @@ export const getAllMedicine = AsyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const redisKey = `allMediPharma:${user.pharmacyId}:page:${page}:limit:${limit}`;
+    const search = req.query.search?.trim() || "";
+
+    const redisKey = `allMediPharma:${user.pharmacyId}:page:${page}:limit:${limit}:search:${search}`;
 
     let allMedi;
 
@@ -320,17 +322,39 @@ export const getAllMedicine = AsyncHandler(async (req, res) => {
     if (redisAllMedi) {
         allMedi = JSON.parse(redisAllMedi);
     } else {
+        let medicineIds = [];
+
+        if (search) {
+            const medicines = await Medicines.find({
+                $or: [
+                    { name: { $regex: search, $options: "i" } },
+                    { genericName: { $regex: search, $options: "i" } },
+                    { strength: { $regex: search, $options: "i" } },
+                ]
+            }).select("_id");
+
+            medicineIds = medicines.map((item) => item._id);
+        }
+
+        // main query
+        const query = {
+            pharmacyId: user.pharmacyId,
+            ...(search && {
+                medicineId: { $in: medicineIds }
+            })
+        };
+
         const [data, total] = await Promise.all([
-            PharmacyMedicines.find({ pharmacyId: user.pharmacyId })
+            PharmacyMedicines.find(query)
                 .populate({
                     path: "medicineId",
-                    select:"_id name genericName strength medicineType"
+                    select: "_id name genericName strength medicineType"
                 })
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 }),
 
-            PharmacyMedicines.countDocuments({ pharmacyId: user.pharmacyId })
+            PharmacyMedicines.countDocuments(query)
         ]);
 
         allMedi = {

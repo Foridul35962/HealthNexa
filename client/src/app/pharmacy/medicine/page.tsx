@@ -1,10 +1,9 @@
 "use client"
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/store/store'
 import { getAllShopMedicine } from '@/store/slice/pharmacySlice'
-import { toast } from 'react-toastify'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -16,17 +15,18 @@ import { TbMedicineSyrup } from "react-icons/tb";
 import { GiLoveInjection } from "react-icons/gi";
 import { IoEyedropSharp } from "react-icons/io5";
 import { MdOutlineAir } from "react-icons/md";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Edit3, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit3,
   Trash2,
   LayoutDashboard,
   Plus,
-  Pill
+  Pill,
+  Search,
+  X
 } from 'lucide-react'
 
-// Medicine Configuration
 const medicineConfig: any = {
   tablet: { icon: CiTablets1, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", label: "Tablet" },
   capsule: { icon: FaCapsules, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", label: "Capsule" },
@@ -42,28 +42,45 @@ const MedicineInventory = () => {
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   const { pharmacyFetchLoading, allShopMedicine } = useSelector((state: RootState) => state.pharmacy)
-  
+
   const currentPage = Number(searchParams.get('page')) || 1
+  const currentSearch = searchParams.get('search') || ""
+
+  const [searchInput, setSearchInput] = useState(currentSearch)
   const limit = 10
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        await dispatch(getAllShopMedicine({ 
-          page: currentPage.toString(), 
-          limit: limit.toString() 
-        })).unwrap()
-      } catch (error: any) {
-        toast.error(error.message)
-      }
+  // Common function to update URL
+  const applySearch = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value.trim()) {
+      params.set('search', value.trim())
+    } else {
+      params.delete('search')
     }
-    fetchMedicines()
-  }, [dispatch, currentPage])
+    params.set('page', '1')
+    router.push(`?${params.toString()}`)
+  }
+
+  // Handle Key Down (Enter)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      applySearch(searchInput)
+    }
+  }
+
+  // Effect to fetch data when URL params change
+  useEffect(() => {
+    dispatch(getAllShopMedicine({
+      page: currentPage.toString(),
+      limit: limit.toString(),
+      search: currentSearch
+    }))
+  }, [dispatch, currentPage, currentSearch])
 
   const updatePageQuery = (newPage: number) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams.toString())
     params.set('page', newPage.toString())
     router.push(`?${params.toString()}`)
   }
@@ -71,25 +88,56 @@ const MedicineInventory = () => {
   return (
     <div className="min-h-screen bg-[#fcfcfd] p-4 lg:p-8 w-full">
       <div className="w-full mx-auto">
-        
+
         {/* Header section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 px-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 px-2">
           <div>
             <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
               <LayoutDashboard className="text-blue-600" /> INVENTORY
             </h1>
             <p className="text-slate-500 text-sm font-medium">Manage your pharmacy products & stock levels</p>
           </div>
-          
-          <Link 
-            href="/pharmacy/medicine/add"
-            className="flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 active:scale-95"
-          >
-            <Plus size={18} /> Add Medicine
-          </Link>
+
+          <div className="flex flex-col text-black sm:flex-row items-center gap-4">
+            <div className="relative w-full sm:w-80 group">
+              <button
+                onClick={() => applySearch(searchInput)}
+                type="button"
+                className="absolute inset-y-0 left-4 z-10 flex items-center text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                <Search size={18} />
+              </button>
+
+              <input
+                type="text"
+                placeholder="Search & press Enter..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-200 transition-all shadow-sm"
+              />
+
+              {searchInput && (
+                <button
+                  onClick={() => { setSearchInput(""); applySearch(""); }}
+                  type="button"
+                  className="absolute inset-y-0 right-4 z-10 flex items-center text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <Link
+              href="/pharmacy/medicine/add"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 active:scale-95"
+            >
+              <Plus size={18} /> Add Medicine
+            </Link>
+          </div>
         </div>
 
-        {/* Inventory Table Container */}
+        {/* Inventory Table */}
         <div className="bg-white rounded-4xl border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.03)] overflow-hidden w-full">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse table-fixed min-w-225">
@@ -106,13 +154,13 @@ const MedicineInventory = () => {
                 <AnimatePresence mode='wait'>
                   {pharmacyFetchLoading ? (
                     <SkeletonRows count={8} />
-                  ) : (
-                    allShopMedicine?.data?.map((item, idx) => {
-                      const typeConfig = medicineConfig[item.medicineId.medicineType]
+                  ) : allShopMedicine?.data?.length > 0 ? (
+                    allShopMedicine.data.map((item: any, idx: number) => {
+                      const typeConfig = medicineConfig[item.medicineId?.medicineType?.toLowerCase()]
                       const Icon = typeConfig?.icon || Pill
-                      
+
                       return (
-                        <motion.tr 
+                        <motion.tr
                           key={item._id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -121,21 +169,21 @@ const MedicineInventory = () => {
                         >
                           <td className="p-6">
                             <div className="flex items-center gap-4">
-                              <div className={`shrink-0 w-12 h-12 ${typeConfig?.bg} ${typeConfig?.color} rounded-2xl flex items-center justify-center border ${typeConfig?.border} shadow-sm group-hover:scale-110 transition-transform`}>
+                              <div className={`shrink-0 w-12 h-12 ${typeConfig?.bg || 'bg-slate-50'} ${typeConfig?.color || 'text-slate-400'} rounded-2xl flex items-center justify-center border ${typeConfig?.border || 'border-slate-200'} shadow-sm group-hover:scale-110 transition-transform`}>
                                 <Icon size={24} />
                               </div>
                               <div className="overflow-hidden">
                                 <h4 className="font-bold text-slate-800 flex items-center gap-2 truncate">
-                                  {item.medicineId.name} 
-                                  <span className="shrink-0 text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded-md font-black">{item.medicineId.strength}</span>
+                                  {item.medicineId?.name}
+                                  <span className="shrink-0 text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded-md font-black">{item.medicineId?.strength}</span>
                                 </h4>
-                                <p className="text-xs text-slate-400 font-medium truncate">{item.medicineId.genericName}</p>
+                                <p className="text-xs text-slate-400 font-medium truncate">{item.medicineId?.genericName}</p>
                               </div>
                             </div>
                           </td>
                           <td className="p-6">
-                            <span className={`inline-flex text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${typeConfig?.bg} ${typeConfig?.color} ${typeConfig?.border}`}>
-                              {typeConfig?.label}
+                            <span className={`inline-flex text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${typeConfig?.bg || 'bg-slate-50'} ${typeConfig?.color || 'text-slate-400'} ${typeConfig?.border || 'border-slate-200'}`}>
+                              {typeConfig?.label || item.medicineId?.medicineType}
                             </span>
                           </td>
                           <td className="p-6">
@@ -153,9 +201,9 @@ const MedicineInventory = () => {
                           <td className="p-6">
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-2">
-                                <div className={`h-2 w-full max-w-20 rounded-full bg-slate-100 overflow-hidden`}>
-                                  <div 
-                                    className={`h-full transition-all duration-500 ${item.stock < 20 ? 'bg-rose-500' : 'bg-emerald-500'}`} 
+                                <div className="h-2 w-full max-w-20 rounded-full bg-slate-100 overflow-hidden">
+                                  <div
+                                    className={`h-full transition-all duration-500 ${item.stock < 20 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                                     style={{ width: `${Math.min(item.stock, 100)}%` }}
                                   />
                                 </div>
@@ -168,7 +216,7 @@ const MedicineInventory = () => {
                           </td>
                           <td className="p-6 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                              <Link href={`/pharmacy/medicine/edit${item._id}`} className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:shadow-md transition-all active:scale-90">
+                              <Link href={`/pharmacy/medicine/edit/${item._id}`} className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:shadow-md transition-all active:scale-90">
                                 <Edit3 size={16} />
                               </Link>
                               <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:shadow-md transition-all active:scale-90">
@@ -179,20 +227,26 @@ const MedicineInventory = () => {
                         </motion.tr>
                       )
                     })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-20 text-center text-slate-400 font-medium">
+                        No medicine found. Try a different search term.
+                      </td>
+                    </tr>
                   )}
                 </AnimatePresence>
               </tbody>
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination Section (Restored Design) */}
           <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              Page {allShopMedicine?.pagination?.page} of {allShopMedicine?.pagination?.totalPages}
+              Page {allShopMedicine?.pagination?.page || 1} of {allShopMedicine?.pagination?.totalPages || 1}
             </span>
-            
+
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => updatePageQuery(currentPage - 1)}
                 disabled={currentPage === 1 || pharmacyFetchLoading}
                 className="p-2.5 rounded-xl border border-slate-200 bg-white disabled:opacity-30 hover:bg-slate-50 transition-all active:scale-90"
@@ -205,18 +259,17 @@ const MedicineInventory = () => {
                   <button
                     key={i}
                     onClick={() => updatePageQuery(i + 1)}
-                    className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${
-                      currentPage === i + 1 
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
-                      : 'text-slate-400 bg-white border border-transparent hover:border-slate-200'
-                    }`}
+                    className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${currentPage === i + 1
+                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                        : 'text-slate-400 bg-white border border-transparent hover:border-slate-200'
+                      }`}
                   >
                     {i + 1}
                   </button>
                 ))}
               </div>
 
-              <button 
+              <button
                 onClick={() => updatePageQuery(currentPage + 1)}
                 disabled={currentPage === (allShopMedicine?.pagination?.totalPages || 1) || pharmacyFetchLoading}
                 className="p-2.5 rounded-xl border border-slate-200 bg-white disabled:opacity-30 hover:bg-slate-50 transition-all active:scale-90"
@@ -231,7 +284,6 @@ const MedicineInventory = () => {
   )
 }
 
-// Skeleton UI matching the new widths
 const SkeletonRows = ({ count }: { count: number }) => (
   <>
     {[...Array(count)].map((_, i) => (
@@ -257,4 +309,4 @@ const SkeletonRows = ({ count }: { count: number }) => (
   </>
 )
 
-export default MedicineInventory
+export default MedicineInventory;
