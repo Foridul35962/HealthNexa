@@ -418,3 +418,29 @@ export const getMedicineFromShop = AsyncHandler(async (req, res) => {
             new ApiResponse(200, medicine, "medicine fetch done")
         )
 })
+
+export const deleteMedicineFromShop = AsyncHandler(async(req,res)=>{
+    const user = req.user
+    const { medicineId } = req.params
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    const redisKey = `shopMedicine:${user.pharmacyId}:${medicineId}`
+    try {
+        await PharmacyMedicines.findOneAndDelete({
+            _id:medicineId,
+            pharmacyId: user.pharmacyId
+        })
+    } catch (error) {
+        throw new ApiErrors(404, "medicine not found in shop")
+    }
+
+    await redis.del(redisKey)
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, medicineId, "medicine delete from shop done")
+        )
+})

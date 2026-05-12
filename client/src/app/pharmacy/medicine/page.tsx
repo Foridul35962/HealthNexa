@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '@/store/store'
-import { addEditMediPhar, getAllShopMedicine } from '@/store/slice/pharmacySlice'
+import { addEditMediPhar, deletePharMedi, getAllShopMedicine } from '@/store/slice/pharmacySlice'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -27,6 +27,7 @@ import {
   X
 } from 'lucide-react'
 import { PharmacyMedicineType } from '@/Types/pharmacyTypes'
+import { toast } from 'react-toastify'
 
 const medicineConfig: any = {
   tablet: { icon: CiTablets1, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", label: "Tablet" },
@@ -43,6 +44,7 @@ const MedicineInventory = () => {
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [deletedId, setDeletedId] = useState("")
 
   const { pharmacyFetchLoading, allShopMedicine } = useSelector((state: RootState) => state.pharmacy)
 
@@ -89,6 +91,20 @@ const MedicineInventory = () => {
   const handleEdit = async (item: PharmacyMedicineType) => {
     dispatch(addEditMediPhar(item))
     router.push(`/pharmacy/medicine/edit/${item._id}`)
+  }
+
+  const handleDelete = async (medicineId: string, medicineName: string) => {
+    if (window.confirm(`Are you really want to delete ${medicineName} from your shop?`)) {
+      try {
+        setDeletedId(medicineId)
+        await dispatch(deletePharMedi({ medicineId })).unwrap()
+        toast.success("medicine deleted from shop")
+      } catch (error: any) {
+        toast.error(error.message)
+      } finally {
+        setDeletedId("")
+      }
+    }
   }
 
   return (
@@ -225,8 +241,17 @@ const MedicineInventory = () => {
                               <button onClick={() => handleEdit(item)} className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:shadow-md transition-all active:scale-90">
                                 <Edit3 size={16} />
                               </button>
-                              <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:shadow-md transition-all active:scale-90">
-                                <Trash2 size={16} />
+                              <button
+                                disabled={deletedId === item._id}
+                                onClick={() => handleDelete(item._id, item.medicineId?.name)}
+                                className={`p-2.5 bg-white border border-slate-100 rounded-xl transition-all 
+                                  ${deletedId === item._id ? 'opacity-50 cursor-not-allowed' : 'text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:shadow-md active:scale-90'}`}
+                              >
+                                {deletedId === item._id ? (
+                                  <div className="h-4 w-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <Trash2 size={16} />
+                                )}
                               </button>
                             </div>
                           </td>

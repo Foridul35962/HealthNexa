@@ -87,6 +87,21 @@ export const getPharMedi = createAsyncThunk(
     }
 )
 
+export const deletePharMedi = createAsyncThunk(
+    "pharmacy/deletepharmedi",
+    async({medicineId}:{medicineId:string},{rejectWithValue})=>{
+        try {
+            const res = await axios.delete(`${SERVER_URL}/pharMedi/${medicineId}`,{
+                withCredentials: true
+            })
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface InitialStateType {
     pharmacyFetchLoading: boolean
     pharmacyLoading: boolean
@@ -185,6 +200,12 @@ const pharmacySlice = createSlice({
             })
             .addCase(getPharMedi.rejected, (state) => {
                 state.pharmacyFetchLoading = false
+            })
+        //delete medicine from shop
+        builder
+            .addCase(deletePharMedi.fulfilled, (state, action)=>{
+                const medicineId = action.payload.data
+                state.allShopMedicine.data = state.allShopMedicine.data.filter((m)=>m._id !== medicineId)
             })
     }
 })
