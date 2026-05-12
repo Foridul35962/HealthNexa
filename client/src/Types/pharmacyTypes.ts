@@ -68,7 +68,6 @@ export interface IPharmacyDashboardType {
         contactNumber: string
         image?: {
             url?: string
-            publicId?: string
         }
         address: {
             house: string

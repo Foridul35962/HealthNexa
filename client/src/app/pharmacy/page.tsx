@@ -7,17 +7,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { motion } from 'framer-motion'
 import { 
-  LayoutDashboard, 
-  Pill, 
-  PackageCheck, 
-  AlertCircle, 
-  TrendingUp, 
-  MapPin, 
-  Phone,
-  Clock,
-  ChevronRight
+  LayoutDashboard, Pill, PackageCheck, AlertCircle, 
+  TrendingUp, MapPin, Phone, Clock, ChevronRight, Store
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 // --- Skeleton Component ---
 const Skeleton = ({ className }: { className: string }) => (
@@ -75,15 +69,25 @@ const PharmacyDashboard = () => {
     >
       {/* Header Section */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <LayoutDashboard className="text-indigo-600" /> 
-            {pharmacyInfo.name}
-          </h1>
-          <p className="text-slate-500 text-sm mt-1 flex items-center gap-3">
-            <span className="flex items-center gap-1"><MapPin size={14}/> {pharmacyInfo.address.city}, {pharmacyInfo.address.street}</span>
-            <span className="flex items-center gap-1"><Phone size={14}/> {pharmacyInfo.contactNumber}</span>
-          </p>
+        <div className="flex items-center gap-4">
+          {/* Pharmacy Image */}
+          <div className="h-16 w-16 relative rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+            {pharmacyInfo.image?.url ? (
+              <Image src={pharmacyInfo.image.url} alt={pharmacyInfo.name} fill className="object-cover" />
+            ) : (
+              <Store className="text-slate-400" size={28} />
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <LayoutDashboard className="text-indigo-600" /> 
+              {pharmacyInfo.name}
+            </h1>
+            <p className="text-slate-500 text-sm mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1"><MapPin size={14}/> {pharmacyInfo.address.city}, {pharmacyInfo.address.street}</span>
+              <span className="flex items-center gap-1"><Phone size={14}/> {pharmacyInfo.contactNumber}</span>
+            </p>
+          </div>
         </div>
       </header>
 
@@ -135,7 +139,14 @@ const PharmacyDashboard = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">{item.medicineId.genericName}</td>
                     <td className="px-6 py-4 font-medium text-slate-700">{item.stock}</td>
-                    <td className="px-6 py-4 font-bold text-indigo-600">৳{item.price}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-indigo-600">৳{item.price - (item.discountPrice || 0)}</span>
+                        {item.discountPrice ? (
+                          <span className="text-[10px] text-slate-400 line-through">৳{item.price}</span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${item.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                         {item.isAvailable ? 'In Stock' : 'Out of Stock'}
@@ -158,11 +169,11 @@ const PharmacyDashboard = () => {
                 {pharmacyInfo.address.city} - {pharmacyInfo.address.postalCode}
               </p>
               <div className="mt-6 flex items-center gap-2 text-xs text-indigo-200">
-                <Clock size={14} /> Updated {new Date(recentMedicines[0]?.updatedAt).toLocaleDateString()}
+                <Clock size={14} /> Updated {new Date(recentMedicines[0]?.updatedAt || Date.now()).toLocaleDateString()}
               </div>
             </div>
             {/* Background Decoration */}
-            <div className="absolute -right-4 -bottom-4 bg-indigo-800 w-24 h-24 rounded-full opacity-50 transition-transform" />
+            <div className="absolute -right-4 -bottom-4 bg-indigo-800 w-24 h-24 rounded-full opacity-50" />
           </div>
         </div>
       </div>
