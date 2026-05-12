@@ -11,5 +11,6 @@ pharmacyRouter.patch("/edit-medishop/:pharMediId", protect, isPharmacyOwner, con
 pharmacyRouter.get("/all-pharMedi", protect, isPharmacyOwner, controller.getAllMedicine)
 pharmacyRouter.get("/pharMedi/:medicineId", protect, isPharmacyOwner, controller.getMedicineFromShop)
 pharmacyRouter.delete("/pharMedi/:medicineId", protect, isPharmacyOwner, controller.deleteMedicineFromShop)
+pharmacyRouter.get("/dashboard", protect, isPharmacyOwner, controller.pharmacyDashboard)
 
 export default pharmacyRouter

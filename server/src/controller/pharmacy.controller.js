@@ -7,6 +7,7 @@ import RequestMedicines from '../models/RequestMedicine.model.js'
 import mongoose from 'mongoose'
 import PharmacyMedicines from '../models/PharmacyMedicine.model.js'
 import redis from '../config/redis.js'
+import Pharmacy from '../models/Pharmacy.model.js'
 
 export const medicineRequest = [
     check('name')
@@ -419,7 +420,7 @@ export const getMedicineFromShop = AsyncHandler(async (req, res) => {
         )
 })
 
-export const deleteMedicineFromShop = AsyncHandler(async(req,res)=>{
+export const deleteMedicineFromShop = AsyncHandler(async (req, res) => {
     const user = req.user
     const { medicineId } = req.params
     if (!medicineId) {
@@ -429,7 +430,7 @@ export const deleteMedicineFromShop = AsyncHandler(async(req,res)=>{
     const redisKey = `shopMedicine:${user.pharmacyId}:${medicineId}`
     try {
         await PharmacyMedicines.findOneAndDelete({
-            _id:medicineId,
+            _id: medicineId,
             pharmacyId: user.pharmacyId
         })
     } catch (error) {
@@ -444,3 +445,91 @@ export const deleteMedicineFromShop = AsyncHandler(async(req,res)=>{
             new ApiResponse(200, medicineId, "medicine delete from shop done")
         )
 })
+
+export const pharmacyDashboard = AsyncHandler(async (req, res) => {
+    const user = req.user;
+
+    const pharmacyId = user.pharmacyId
+
+    const redisKey = `pharmacyDashboard:${pharmacyId}`
+    const redisData = await redis.get(redisKey)
+
+    let data
+    if (redisData) {
+        data = JSON.parse(redisData)
+    } else {
+        const [
+            totalMedicines,
+            availableMedicines,
+            outOfStock,
+            lowStockMedicines,
+            recentMedicines,
+            pharmacyInfo
+        ] = await Promise.all([
+
+            PharmacyMedicines.countDocuments({
+                pharmacyId
+            }),
+
+            // available medicines
+            PharmacyMedicines.countDocuments({
+                pharmacyId,
+                stock: { $gt: 0 },
+                isAvailable: true
+            }),
+
+            // out of stock
+            PharmacyMedicines.countDocuments({
+                pharmacyId,
+                stock: 0
+            }),
+
+            // low stock
+            PharmacyMedicines.countDocuments({
+                pharmacyId,
+                stock: { $gt: 0, $lte: 10 }
+            }),
+
+            // recently added medicines
+            PharmacyMedicines.find({
+                pharmacyId
+            })
+                .populate({
+                    path: "medicineId",
+                    select: "name genericName strength medicineType"
+                })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .lean(),
+
+            // pharmacy basic info
+            Pharmacy.findById(pharmacyId)
+                .select("name image.url address contactNumber")
+        ]);
+
+        data = {
+            pharmacyInfo,
+
+            overview: {
+                totalMedicines,
+                availableMedicines,
+                outOfStock,
+                lowStockMedicines
+            },
+
+            recentMedicines
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(data),
+            "EX", 600
+        )
+    }
+
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, data, "pharmacy dashboard fetch successfully")
+        );
+});

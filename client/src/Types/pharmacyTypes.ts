@@ -60,3 +60,46 @@ export interface GetAllShopMedicineType {
     data: PharmacyMedicineType[]
     pagination: PaginationType
 }
+
+export interface IPharmacyDashboardType {
+    pharmacyInfo: {
+        _id: string
+        name: string
+        contactNumber: string
+        image?: {
+            url?: string
+            publicId?: string
+        }
+        address: {
+            house: string
+            street: string
+            city: string
+            postalCode: string
+        }
+    }
+
+    overview: {
+        totalMedicines: number
+        availableMedicines: number
+        outOfStock: number
+        lowStockMedicines: number
+    }
+
+    recentMedicines: {
+        _id: string
+        pharmacyId: string
+        stock: number
+        price: number
+        discountPrice?: number
+        isAvailable: boolean
+        createdAt: string
+        updatedAt: string
+
+        medicineId: {
+            name: string
+            genericName: string
+            strength: string
+            medicineType: string
+        }
+    }[]
+}

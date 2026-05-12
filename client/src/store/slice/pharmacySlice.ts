@@ -1,4 +1,4 @@
-import { editPharmacyMedicineType, GetAllShopMedicineType, PharmacyMedicineType, pharmacyMedicineType, requestMedicineType } from "@/Types/pharmacyTypes";
+import { editPharmacyMedicineType, GetAllShopMedicineType, IPharmacyDashboardType, PharmacyMedicineType, pharmacyMedicineType, requestMedicineType } from "@/Types/pharmacyTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -102,11 +102,27 @@ export const deletePharMedi = createAsyncThunk(
     }
 )
 
+export const getPharmacyDashboard = createAsyncThunk(
+    "pharmacy/dashborad",
+    async(_:null, {rejectWithValue})=>{
+        try {
+            const res = await axios.get(`${SERVER_URL}/dashboard`,
+                {withCredentials: true}
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface InitialStateType {
     pharmacyFetchLoading: boolean
     pharmacyLoading: boolean
     allShopMedicine: GetAllShopMedicineType
     editPharMedi:PharmacyMedicineType | null
+    pharmacyDashboard: IPharmacyDashboardType | null
 }
 
 const initialState: InitialStateType = {
@@ -121,7 +137,8 @@ const initialState: InitialStateType = {
             totalPages: 0
         }
     },
-    editPharMedi: null
+    editPharMedi: null,
+    pharmacyDashboard: null
 }
 
 const pharmacySlice = createSlice({
@@ -206,6 +223,18 @@ const pharmacySlice = createSlice({
             .addCase(deletePharMedi.fulfilled, (state, action)=>{
                 const medicineId = action.payload.data
                 state.allShopMedicine.data = state.allShopMedicine.data.filter((m)=>m._id !== medicineId)
+            })
+        //get dashboard
+        builder
+            .addCase(getPharmacyDashboard.pending,(state)=>{
+                state.pharmacyFetchLoading = true
+            })
+            .addCase(getPharmacyDashboard.fulfilled,(state, action)=>{
+                state.pharmacyFetchLoading = false
+                state.pharmacyDashboard = action.payload.data
+            })
+            .addCase(getPharmacyDashboard.rejected,(state)=>{
+                state.pharmacyFetchLoading = false
             })
     }
 })
