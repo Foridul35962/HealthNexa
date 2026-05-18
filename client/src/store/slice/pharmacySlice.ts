@@ -1,4 +1,4 @@
-import { editPharmacyMedicineType, GetAllShopMedicineType, IPharmacyDashboardType, PharmacyMedicineType, pharmacyMedicineType, requestMedicineType } from "@/Types/pharmacyTypes";
+import { editPharmacyMedicineType, GetAllShopMedicineType, IPharmacyDashboardType, PharmacyMedicineType, pharmacyMedicineType, PharmacyType, requestMedicineType } from "@/Types/pharmacyTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -74,9 +74,9 @@ export const getAllShopMedicine = createAsyncThunk(
 
 export const getPharMedi = createAsyncThunk(
     "pharmacy/pharmedi",
-    async({medicineId}:{medicineId:string},{rejectWithValue})=>{
+    async ({ medicineId }: { medicineId: string }, { rejectWithValue }) => {
         try {
-            const res = await axios.get(`${SERVER_URL}/pharMedi/${medicineId}`,{
+            const res = await axios.get(`${SERVER_URL}/pharMedi/${medicineId}`, {
                 withCredentials: true
             })
             return res.data
@@ -89,9 +89,9 @@ export const getPharMedi = createAsyncThunk(
 
 export const deletePharMedi = createAsyncThunk(
     "pharmacy/deletepharmedi",
-    async({medicineId}:{medicineId:string},{rejectWithValue})=>{
+    async ({ medicineId }: { medicineId: string }, { rejectWithValue }) => {
         try {
-            const res = await axios.delete(`${SERVER_URL}/pharMedi/${medicineId}`,{
+            const res = await axios.delete(`${SERVER_URL}/pharMedi/${medicineId}`, {
                 withCredentials: true
             })
             return res.data
@@ -104,10 +104,40 @@ export const deletePharMedi = createAsyncThunk(
 
 export const getPharmacyDashboard = createAsyncThunk(
     "pharmacy/dashborad",
-    async(_:null, {rejectWithValue})=>{
+    async (_: null, { rejectWithValue }) => {
         try {
             const res = await axios.get(`${SERVER_URL}/dashboard`,
-                {withCredentials: true}
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const getMyPharmacy = createAsyncThunk(
+    "pharmacy/myPharmacy",
+    async (_: null, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/my-pharmacy`,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const editPharmacy = createAsyncThunk(
+    "pharmacy/edit",
+    async (data: FormData, { rejectWithValue }) => {
+        try {
+            const res = await axios.patch(`${SERVER_URL}/edit-pharma`, data,
+                { withCredentials: true }
             )
             return res.data
         } catch (error) {
@@ -121,8 +151,9 @@ interface InitialStateType {
     pharmacyFetchLoading: boolean
     pharmacyLoading: boolean
     allShopMedicine: GetAllShopMedicineType
-    editPharMedi:PharmacyMedicineType | null
+    editPharMedi: PharmacyMedicineType | null
     pharmacyDashboard: IPharmacyDashboardType | null
+    pharmacy: PharmacyType | null
 }
 
 const initialState: InitialStateType = {
@@ -138,14 +169,15 @@ const initialState: InitialStateType = {
         }
     },
     editPharMedi: null,
-    pharmacyDashboard: null
+    pharmacyDashboard: null,
+    pharmacy: null
 }
 
 const pharmacySlice = createSlice({
     name: "pharmacy",
     initialState,
     reducers: {
-        addEditMediPhar: (state, action)=>{
+        addEditMediPhar: (state, action) => {
             state.editPharMedi = action.payload
         }
     },
@@ -220,25 +252,55 @@ const pharmacySlice = createSlice({
             })
         //delete medicine from shop
         builder
-            .addCase(deletePharMedi.fulfilled, (state, action)=>{
+            .addCase(deletePharMedi.fulfilled, (state, action) => {
                 const medicineId = action.payload.data
-                state.allShopMedicine.data = state.allShopMedicine.data.filter((m)=>m._id !== medicineId)
+                state.allShopMedicine.data = state.allShopMedicine.data.filter((m) => m._id !== medicineId)
             })
         //get dashboard
         builder
-            .addCase(getPharmacyDashboard.pending,(state)=>{
+            .addCase(getPharmacyDashboard.pending, (state) => {
                 state.pharmacyFetchLoading = true
             })
-            .addCase(getPharmacyDashboard.fulfilled,(state, action)=>{
+            .addCase(getPharmacyDashboard.fulfilled, (state, action) => {
                 state.pharmacyFetchLoading = false
                 state.pharmacyDashboard = action.payload.data
             })
-            .addCase(getPharmacyDashboard.rejected,(state)=>{
+            .addCase(getPharmacyDashboard.rejected, (state) => {
                 state.pharmacyFetchLoading = false
+            })
+        //get pharmacy
+        builder
+            .addCase(getMyPharmacy.pending, (state) => {
+                state.pharmacyFetchLoading = true
+            })
+            .addCase(getMyPharmacy.fulfilled, (state, action) => {
+                state.pharmacyFetchLoading = false
+                state.pharmacy = action.payload.data
+            })
+            .addCase(getMyPharmacy.rejected, (state) => {
+                state.pharmacyFetchLoading = false
+            })
+        // edit pharmacy
+        builder
+            .addCase(editPharmacy.pending, (state) => {
+                state.pharmacyLoading = true
+            })
+            .addCase(editPharmacy.fulfilled, (state, action) => {
+                state.pharmacyLoading = false
+                const updatedPharmacy = action.payload.data
+                if (state.pharmacy) {
+                    state.pharmacy = updatedPharmacy
+                }
+                if (state.pharmacyDashboard) {
+                    state.pharmacyDashboard.pharmacyInfo = updatedPharmacy
+                }
+            })
+            .addCase(editPharmacy.rejected, (state) => {
+                state.pharmacyLoading = false
             })
     }
 })
 
-export const {addEditMediPhar} = pharmacySlice.actions
+export const { addEditMediPhar } = pharmacySlice.actions
 
 export default pharmacySlice.reducer

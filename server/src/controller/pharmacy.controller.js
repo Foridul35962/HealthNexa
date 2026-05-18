@@ -8,6 +8,8 @@ import mongoose from 'mongoose'
 import PharmacyMedicines from '../models/PharmacyMedicine.model.js'
 import redis from '../config/redis.js'
 import Pharmacy from '../models/Pharmacy.model.js'
+import uploadToCloudinary from '../utils/uploadToCloudinary.js'
+import cloudinary from '../config/cloudinary.js'
 
 export const medicineRequest = [
     check('name')
@@ -533,3 +535,156 @@ export const pharmacyDashboard = AsyncHandler(async (req, res) => {
             new ApiResponse(200, data, "pharmacy dashboard fetch successfully")
         );
 });
+
+export const editPharmacy = [
+    check("name")
+        .optional()
+        .trim()
+        .notEmpty()
+        .withMessage("name cannot be empty"),
+
+    check("contactNumber")
+        .optional()
+        .trim()
+        .notEmpty()
+        .withMessage("contactNumber is required")
+        .isMobilePhone("bn-BD")
+        .withMessage("contactNumber is invalid"),
+
+    AsyncHandler(async (req, res) => {
+        const error = validationResult(req);
+
+        if (!error.isEmpty()) {
+            throw new ApiErrors(400, "invalid value", error.array());
+        }
+
+        const { name, contactNumber } = req.body;
+        const user = req.user;
+
+        const pharmacy = await Pharmacy.findById(user.pharmacyId);
+
+        if (!pharmacy) {
+            throw new ApiErrors(404, "pharmacy not found");
+        }
+
+        const image = req.files?.[0];
+
+        if (image && !image.mimetype.startsWith("image/")) {
+            throw new ApiErrors(400, "only image files are allowed");
+        }
+
+        let upload;
+
+        if (image) {
+            const uploaded = await uploadToCloudinary(
+                image.buffer,
+                "HealthNexa"
+            );
+
+            upload = {
+                url: uploaded.secure_url,
+                publicId: uploaded.public_id,
+            };
+        }
+
+        const duplicateConditions = [];
+
+        if (name !== undefined && name !== pharmacy.name) {
+            duplicateConditions.push({ name });
+        }
+
+        if (
+            contactNumber !== undefined &&
+            contactNumber !== pharmacy.contactNumber
+        ) {
+            duplicateConditions.push({ contactNumber });
+        }
+
+        if (duplicateConditions.length > 0) {
+            const existing = await Pharmacy.findOne({
+                _id: { $ne: pharmacy._id },
+                $or: duplicateConditions,
+            });
+
+            if (existing) {
+                if (existing.name === name) {
+                    throw new ApiErrors(400, "pharmacy name already exists");
+                }
+
+                if (existing.contactNumber === contactNumber) {
+                    throw new ApiErrors(
+                        400,
+                        "contact number already exists"
+                    );
+                }
+            }
+        }
+
+        if (name !== undefined) {
+            pharmacy.name = name;
+        }
+
+        if (contactNumber !== undefined) {
+            pharmacy.contactNumber = contactNumber;
+        }
+
+        if (upload) {
+            try {
+                if (pharmacy.image?.publicId) {
+                    await cloudinary.uploader.destroy(
+                        pharmacy.image.publicId
+                    );
+                }
+            } catch (err) {
+                throw new ApiErrors(500, "old image delete failed");
+            }
+
+            pharmacy.image = upload;
+        }
+
+        const updated = await pharmacy.save();
+
+        const redisKey = `pharmacyDashboard:${user.pharmacyId}`;
+        await redis.del(redisKey);
+
+        updated.location = undefined
+        if (updated.image.publicId) {
+            updated.image.publicId = undefined
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, updated, "pharmacy updated successfully")
+        );
+    }),
+];
+
+export const getMyPharmacy = AsyncHandler(async (req, res) => {
+    const user = req.user
+
+    const redisKey = `pharmacy:${user.pharmacyId}`
+    let pharmacy
+
+    const redisPharmacy = await redis.get(redisKey)
+    if (redisPharmacy) {
+        pharmacy = JSON.parse(redisPharmacy)
+    } else {
+        pharmacy = await Pharmacy.findById(user.pharmacyId)
+            .select("-location -image.publicId")
+            .lean()
+
+        if (!pharmacy) {
+            throw new ApiErrors(404, "pharmacy is not found")
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(pharmacy),
+            "EX", 300
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, pharmacy, "my pharmacy fetch successfull")
+        )
+})

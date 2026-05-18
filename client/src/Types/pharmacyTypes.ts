@@ -1,5 +1,3 @@
-import { medicineNameType } from "./publicTypes"
-
 export interface requestMedicineType {
     name: string
     genericName: string
@@ -101,4 +99,25 @@ export interface IPharmacyDashboardType {
             medicineType: string
         }
     }[]
+}
+
+export interface PharmacyImage {
+    url?: string;
+}
+
+export interface PharmacyAddress {
+    house: string;
+    street: string;
+    city: string;
+    postalCode: string;
+}
+
+export interface PharmacyType {
+    _id: string;
+    name: string;
+    address: PharmacyAddress;
+    contactNumber: string;
+    image?: PharmacyImage;
+    createdAt: string;
+    updatedAt: string;
 }

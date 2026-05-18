@@ -2,6 +2,7 @@ import express from 'express'
 import * as controller from '../controller/pharmacy.controller.js'
 import protect from '../middlewares/protect.js'
 import isPharmacyOwner from '../middlewares/isPharmacyOwner.js'
+import upload from '../middlewares/upload.js'
 
 const pharmacyRouter = express.Router()
 
@@ -12,5 +13,7 @@ pharmacyRouter.get("/all-pharMedi", protect, isPharmacyOwner, controller.getAllM
 pharmacyRouter.get("/pharMedi/:medicineId", protect, isPharmacyOwner, controller.getMedicineFromShop)
 pharmacyRouter.delete("/pharMedi/:medicineId", protect, isPharmacyOwner, controller.deleteMedicineFromShop)
 pharmacyRouter.get("/dashboard", protect, isPharmacyOwner, controller.pharmacyDashboard)
+pharmacyRouter.patch("/edit-pharma", protect, isPharmacyOwner, upload, controller.editPharmacy)
+pharmacyRouter.get("/my-pharmacy", protect, isPharmacyOwner, controller.getMyPharmacy)
 
 export default pharmacyRouter
