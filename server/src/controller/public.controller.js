@@ -4,6 +4,9 @@ import ApiResponse from "../helpers/ApiResponse.js";
 import AsyncHandler from "../helpers/AsyncHandler.js";
 import Doctors from "../models/Doctors.model.js";
 import Medicines from "../models/Medicine.model.js";
+import { check, validationResult } from "express-validator"
+import PharmacyMedicines from "../models/PharmacyMedicine.model.js";
+import mongoose from "mongoose";
 
 export const getDoctor = AsyncHandler(async (req, res) => {
     const { doctorId } = req.params
@@ -64,3 +67,113 @@ export const getMedicineNames = AsyncHandler(async (req, res) => {
             new ApiResponse(200, medicines, "medicine name fetch done")
         )
 })
+
+export const getNearestPharmacy = [
+    check("medicineId")
+        .notEmpty()
+        .withMessage("Medicine Id is required")
+        .isMongoId()
+        .withMessage("Invalid medicineId"),
+
+    check("location.lat")
+        .notEmpty()
+        .withMessage("latitude is required")
+        .isFloat(),
+
+    check("location.lon")
+        .notEmpty()
+        .withMessage("longitude is required")
+        .isFloat(),
+
+    AsyncHandler(async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            throw new ApiErrors(400, "Invalid input", errors.array());
+        }
+
+        const { medicineId, location } = req.body;
+
+        const lat = parseFloat(location.lat);
+        const lon = parseFloat(location.lon);
+
+        const redisKey = `medicine:shop:${medicineId}:${lat}:${lon}`;
+
+        const cached = await redis.get(redisKey);
+        if (cached) {
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cached),
+                    "shops fetched successfully (cache)"
+                )
+            );
+        }
+
+        // GEO QUERY
+        const result = await Pharmacy.aggregate([
+            {
+                $geoNear: {
+                    near: {
+                        type: "Point",
+                        coordinates: [lon, lat],
+                    },
+                    distanceField: "distance",
+                    spherical: true,
+                },
+            },
+
+            // join medicine from junction table
+            {
+                $lookup: {
+                    from: "pharmacymedicines",
+                    let: { pharmacyId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$pharmacyId", "$$pharmacyId"] },
+                                        { $eq: ["$medicineId", new mongoose.Types.ObjectId(medicineId)] },
+                                        { $eq: ["$isAvailable", true] },
+                                        { $gt: ["$stock", 0] },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                    as: "medicine",
+                },
+            },
+
+            {
+                $unwind: "$medicine",
+            },
+
+            // nearest 10
+            {
+                $limit: 10,
+            },
+
+            // final output
+            {
+                $project: {
+                    _id: 0,
+                    pharmacyId: "$_id",
+                    name: "$name",
+                    contactNumber: "$contactNumber",
+                    address: "$address",
+                    price: "$medicine.price",
+                    discountPrice: "$medicine.discountPrice",
+                    stock: "$medicine.stock",
+                    distance: { $round: ["$distance", 2] }, // meters
+                },
+            },
+        ]);
+
+        await redis.set(redisKey, JSON.stringify(result), "EX", 600);
+
+        return res.status(200).json(
+            new ApiResponse(200, result, "shops fetched successfully")
+        );
+    }),
+];

@@ -5,5 +5,6 @@ const publicRouter = express.Router()
 
 publicRouter.get(`/get-doctor/:doctorId`, controller.getDoctor)
 publicRouter.get("/medicineName/:medicineName", controller.getMedicineNames)
+publicRouter.post("/get-nearest-shop", controller.getNearestPharmacy)
 
 export default publicRouter

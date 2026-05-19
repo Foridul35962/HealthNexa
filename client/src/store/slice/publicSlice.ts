@@ -1,5 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
-import { medicineNameType } from "@/Types/publicTypes";
+import { GetNearestShopRequestType, medicineNameType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -20,7 +20,7 @@ export const getDoctor = createAsyncThunk(
 
 export const getMedicineNames = createAsyncThunk(
     "public/getMedicineNames",
-    async ({medicineName}: { medicineName: string }, { rejectWithValue }) => {
+    async ({ medicineName }: { medicineName: string }, { rejectWithValue }) => {
         try {
             const res = await axios.get(`${SERVER_URL}/medicineName/${medicineName}`)
             return res.data
@@ -31,22 +31,45 @@ export const getMedicineNames = createAsyncThunk(
     }
 )
 
+export const getNearestShop = createAsyncThunk(
+    "public/getNearestShop",
+    async (data: GetNearestShopRequestType, { rejectWithValue }) => {
+        try {
+            const res = await axios.post(`${SERVER_URL}/get-nearest-shop`, data)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     fetchLoading: boolean
+    publicLoading: boolean
+    publicLocation: publicLocationType | null
     doctor: HosAdminEditDoctorType | null
     medicineName: medicineNameType[]
+    nearestShop: PharmacyMedicineItemType[]
 }
 
 const initialState: initialStateType = {
     fetchLoading: false,
+    publicLoading: false,
     doctor: null,
-    medicineName: []
+    publicLocation: null,
+    medicineName: [],
+    nearestShop: []
 }
 
 const publicSlice = createSlice({
     name: "public",
     initialState,
-    reducers: {},
+    reducers: {
+        setLocation: (state, action) => {
+            state.publicLocation = action.payload
+        }
+    },
     extraReducers: (builder) => {
         //get doctor
         builder
@@ -65,7 +88,20 @@ const publicSlice = createSlice({
             .addCase(getMedicineNames.fulfilled, (state, action) => {
                 state.medicineName = action.payload.data
             })
+        //get nearest shop
+        builder
+            .addCase(getNearestShop.pending, (state) => {
+                state.publicLoading = true
+            })
+            .addCase(getNearestShop.fulfilled, (state, action) => {
+                state.publicLoading = false
+                state.nearestShop = action.payload.data
+            })
+            .addCase(getNearestShop.rejected, (state) => {
+                state.publicLoading = false
+            })
     }
 })
 
+export const { setLocation } = publicSlice.actions
 export default publicSlice.reducer
