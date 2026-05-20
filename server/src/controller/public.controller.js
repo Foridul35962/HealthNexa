@@ -7,6 +7,7 @@ import Medicines from "../models/Medicine.model.js";
 import { check, validationResult } from "express-validator"
 import PharmacyMedicines from "../models/PharmacyMedicine.model.js";
 import mongoose from "mongoose";
+import Pharmacy from "../models/Pharmacy.model.js";
 
 export const getDoctor = AsyncHandler(async (req, res) => {
     const { doctorId } = req.params
@@ -58,7 +59,7 @@ export const getMedicineNames = AsyncHandler(async (req, res) => {
             $options: "i"
         }
     })
-        .select("_id name genericName strength")
+        .select("_id name genericName strength medicineType")
         .limit(10)
 
     return res
@@ -177,3 +178,39 @@ export const getNearestPharmacy = [
         );
     }),
 ];
+
+export const getMedicine = AsyncHandler(async (req, res) => {
+    const { medicineId } = req.params
+    if (!medicineId) {
+        throw new ApiErrors(400, "medicine id is required")
+    }
+
+    if (!mongoose.isValidObjectId(medicineId)) {
+        throw new ApiErrors(400, "invalid medicine id")
+    }
+
+    const redisKey = `medicine:${medicineId}`
+    let medicine
+    const redisMedicine = await redis.get(redisKey)
+    if (redisMedicine) {
+        medicine = JSON.parse(redisMedicine)
+    } else {
+        medicine = await Medicines.findById(medicineId)
+            .select("-approvedBy -addedBy")
+            .lean()
+        if (!medicine) {
+            throw new ApiErrors(404, "medicine is not found")
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(medicine),
+            "EX", 600
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, medicine, "medicine fetch successfully")
+        )
+})

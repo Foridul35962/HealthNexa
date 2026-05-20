@@ -1,5 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
-import { GetNearestShopRequestType, medicineNameType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
+import { GetNearestShopRequestType, MedicineDetailsType, medicineNameType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -44,6 +44,19 @@ export const getNearestShop = createAsyncThunk(
     }
 )
 
+export const getMedicineDetails = createAsyncThunk(
+    "public/getMedicineDetails",
+    async({medicineId}:{medicineId:string}, {rejectWithValue})=>{
+        try {
+            const res = await axios.get(`${SERVER_URL}/medicine/${medicineId}`)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     fetchLoading: boolean
     publicLoading: boolean
@@ -51,6 +64,7 @@ interface initialStateType {
     doctor: HosAdminEditDoctorType | null
     medicineName: medicineNameType[]
     nearestShop: PharmacyMedicineItemType[]
+    medicineDetails: MedicineDetailsType | null
 }
 
 const initialState: initialStateType = {
@@ -59,7 +73,8 @@ const initialState: initialStateType = {
     doctor: null,
     publicLocation: null,
     medicineName: [],
-    nearestShop: []
+    nearestShop: [],
+    medicineDetails: null
 }
 
 const publicSlice = createSlice({
@@ -99,6 +114,11 @@ const publicSlice = createSlice({
             })
             .addCase(getNearestShop.rejected, (state) => {
                 state.publicLoading = false
+            })
+        //get medicine details
+        builder
+            .addCase(getMedicineDetails.fulfilled, (state, action)=>{
+                state.medicineDetails = action.payload.data
             })
     }
 })

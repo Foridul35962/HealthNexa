@@ -3,6 +3,7 @@ export interface medicineNameType {
     name: string
     genericName: string
     strength: string
+    medicineType: "tablet" | "capsule" | "syrup" | "injection" | "cream" | "ointment" | "drops" | "inhaler"
 }
 
 export interface GetNearestShopRequestType {
@@ -41,4 +42,40 @@ export interface PharmacyMedicineItemType {
     stock: number;
 
     distance: number;
+}
+
+export interface MedicineDetailsType {
+    _id: string;
+
+    name: string;
+
+    genericName: string;
+
+    brandName?: string;
+
+    manufacturer: string;
+
+    medicineType:
+    | "tablet"
+    | "capsule"
+    | "syrup"
+    | "injection"
+    | "cream"
+    | "ointment"
+    | "drops"
+    | "inhaler";
+
+    strength: string;
+
+    category?: string;
+
+    description?: string;
+
+    requiresPrescription: boolean;
+
+    sideEffects: string[];
+
+    createdAt: string;
+
+    updatedAt: string;
 }
