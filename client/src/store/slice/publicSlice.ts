@@ -1,5 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
-import { GetNearestShopRequestType, MedicineDetailsType, medicineNameType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
+import { GetNearestShopRequestType, HospitalDetailsType, MedicineDetailsType, medicineNameType, NearestHospitalType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -46,9 +46,43 @@ export const getNearestShop = createAsyncThunk(
 
 export const getMedicineDetails = createAsyncThunk(
     "public/getMedicineDetails",
-    async({medicineId}:{medicineId:string}, {rejectWithValue})=>{
+    async ({ medicineId }: { medicineId: string }, { rejectWithValue }) => {
         try {
             const res = await axios.get(`${SERVER_URL}/medicine/${medicineId}`)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const getNearestHospitals = createAsyncThunk(
+    "public/getNearestHospitals",
+    async ({ data, department, name }: {
+        data: publicLocationType,
+        department?: string,
+        name?: string
+    }, { rejectWithValue }) => {
+        try {
+            const res = await axios.post(`${SERVER_URL}/nearest-hospital`, data, {
+                params: {
+                    department, name
+                }
+            })
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const getHospitalDetails = createAsyncThunk(
+    "public/gethospitalDetails",
+    async ({ hospitalId }: { hospitalId: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/hospital-details/${hospitalId}`)
             return res.data
         } catch (error) {
             const err = error as AxiosError<any>
@@ -65,6 +99,8 @@ interface initialStateType {
     medicineName: medicineNameType[]
     nearestShop: PharmacyMedicineItemType[]
     medicineDetails: MedicineDetailsType | null
+    nearestHospitals: NearestHospitalType[]
+    hospitalDetails: HospitalDetailsType | null
 }
 
 const initialState: initialStateType = {
@@ -74,7 +110,9 @@ const initialState: initialStateType = {
     publicLocation: null,
     medicineName: [],
     nearestShop: [],
-    medicineDetails: null
+    medicineDetails: null,
+    nearestHospitals: [],
+    hospitalDetails: null
 }
 
 const publicSlice = createSlice({
@@ -117,8 +155,32 @@ const publicSlice = createSlice({
             })
         //get medicine details
         builder
-            .addCase(getMedicineDetails.fulfilled, (state, action)=>{
+            .addCase(getMedicineDetails.fulfilled, (state, action) => {
                 state.medicineDetails = action.payload.data
+            })
+        //get nearest hospitals
+        builder
+            .addCase(getNearestHospitals.pending, (state) => {
+                state.fetchLoading = true
+            })
+            .addCase(getNearestHospitals.fulfilled, (state, action) => {
+                state.fetchLoading = false
+                state.nearestHospitals = action.payload.data
+            })
+            .addCase(getNearestHospitals.rejected, (state) => {
+                state.fetchLoading = false
+            })
+        //get hospital detals
+        builder
+            .addCase(getHospitalDetails.pending, (state) => {
+                state.fetchLoading = true
+            })
+            .addCase(getHospitalDetails.fulfilled, (state, action) => {
+                state.fetchLoading = false
+                state.hospitalDetails = action.payload.data
+            })
+            .addCase(getHospitalDetails.rejected, (state) => {
+                state.fetchLoading = false
             })
     }
 })

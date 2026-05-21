@@ -8,6 +8,7 @@ import { check, validationResult } from "express-validator"
 import PharmacyMedicines from "../models/PharmacyMedicine.model.js";
 import mongoose from "mongoose";
 import Pharmacy from "../models/Pharmacy.model.js";
+import Hospitals from "../models/Hospitals.model.js";
 
 export const getDoctor = AsyncHandler(async (req, res) => {
     const { doctorId } = req.params
@@ -214,3 +215,255 @@ export const getMedicine = AsyncHandler(async (req, res) => {
             new ApiResponse(200, medicine, "medicine fetch successfully")
         )
 })
+
+export const getNearestHospitals = [
+    check("location.lat")
+        .notEmpty()
+        .withMessage("latitude is required")
+        .isFloat()
+        .withMessage("invalid latitude"),
+
+    check("location.lon")
+        .notEmpty()
+        .withMessage("longitude is required")
+        .isFloat()
+        .withMessage("invalid longitude"),
+
+    AsyncHandler(async (req, res) => {
+        const error = validationResult(req);
+
+        if (!error.isEmpty()) {
+            throw new ApiErrors(400, "invalid value", error.array());
+        }
+
+        const { location } = req.body;
+        const { department = "all", name = "" } = req.query;
+
+        const lat = parseFloat(location.lat);
+        const lon = parseFloat(location.lon);
+
+        // redis key
+        const redisKey = `hospitals:near:${lat}:${lon}:dept:${department}:name:${name}`;
+
+        // cache check
+        const cached = await redis.get(redisKey);
+
+        if (cached) {
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cached),
+                    "hospital fetched successfully (cache)"
+                )
+            );
+        }
+
+        // filter object
+        const matchStage = {};
+
+        // department filter
+        if (department.toLowerCase() !== "all") {
+            matchStage.specialties = {
+                $regex: new RegExp(`^${department}$`, "i")
+            };
+        }
+
+        // hospital name OR area search
+        if (name.trim()) {
+            matchStage.$or = [
+                {
+                    name: {
+                        $regex: name,
+                        $options: "i"
+                    }
+                },
+                {
+                    "address.house": {
+                        $regex: name,
+                        $options: "i"
+                    }
+                },
+                {
+                    "address.street": {
+                        $regex: name,
+                        $options: "i"
+                    }
+                },
+                {
+                    "address.city": {
+                        $regex: name,
+                        $options: "i"
+                    }
+                }
+            ];
+        }
+
+        const hospitals = await Hospitals.aggregate([
+            {
+                $geoNear: {
+                    near: {
+                        type: "Point",
+                        coordinates: [lon, lat]
+                    },
+                    distanceField: "distance",
+                    spherical: true,
+                    query: matchStage
+                }
+            },
+
+            {
+                $limit: 10
+            },
+
+            {
+                $project: {
+                    name: 1,
+                    specialties: 1,
+                    address: 1,
+                    contactNumber: 1,
+                    image: {
+                        url: "$image.url"
+                    },
+
+                    // meter -> kilometer
+                    distanceInKm: {
+                        $round: [
+                            { $divide: ["$distance", 1000] },
+                            2
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        await redis.set(
+            redisKey,
+            JSON.stringify(hospitals),
+            "EX",
+            600
+        );
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                hospitals,
+                "hospital fetched successfully"
+            )
+        );
+    })
+];
+
+export const getHospitalDetails = AsyncHandler(async (req, res) => {
+    const { hospitalId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(hospitalId)) {
+        throw new ApiErrors(400, "Invalid hospital id");
+    }
+
+    const cacheKey = `hospital:details:${hospitalId}`;
+
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                JSON.parse(cachedData),
+                "Hospital details fetched (cache)"
+            )
+        );
+    }
+
+    const hospital = await Hospitals.findById(hospitalId).lean();
+
+    if (!hospital) {
+        throw new ApiErrors(404, "Hospital not found");
+    }
+
+    const departments = await Doctors.aggregate([
+        {
+            $match: {
+                hospitalId: new mongoose.Types.ObjectId(hospitalId)
+            }
+        },
+
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "user"
+            }
+        },
+
+        {
+            $unwind: "$user"
+        },
+
+        {
+            $group: {
+                _id: "$department",
+                doctors: {
+                    $push: {
+                        doctorId: "$_id",
+                        user: {
+                            fullName: "$user.fullName",
+                            email: "$user.email",
+                            phoneNumber: "$user.phoneNumber",
+                            image: "$user.image"
+                        },
+                        consultationFee: "$consultationFee",
+                        chamberNumber: "$chamberNumber",
+                        schedule: "$schedule",
+                        slotDuration: "$slotDuration"
+                    }
+                }
+            }
+        },
+
+        {
+            $project: {
+                _id: 0,
+                department: "$_id",
+                doctors: { $slice: ["$doctors", 5] },
+                doctorCount: { $size: "$doctors" }
+            }
+        },
+
+        {
+            $sort: { department: 1 }
+        }
+    ]);
+
+    // 4. Stats
+    const totalDoctors = departments.reduce(
+        (sum, dept) => sum + dept.doctorCount,
+        0
+    );
+
+    const response = {
+        hospital,
+        stats: {
+            totalDoctors,
+            totalDepartments: departments.length
+        },
+        departments
+    };
+
+    await redis.set(
+        cacheKey,
+        JSON.stringify(response),
+        "EX",
+        600
+    );
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                response,
+                "Hospital details fetched successfully"
+            )
+        );
+});

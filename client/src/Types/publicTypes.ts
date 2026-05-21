@@ -79,3 +79,81 @@ export interface MedicineDetailsType {
 
     updatedAt: string;
 }
+
+export interface HospitalAddress {
+    house: string;
+    street: string;
+    city: string;
+    postalCode: string;
+}
+
+export interface NearestHospitalType {
+    _id: string;
+    name: string;
+    specialties: string[];
+    address: HospitalAddress;
+    contactNumber: string;
+    image?: {
+        url?: string;
+    }
+
+    // from geoNear
+    distance: number; // meters (MongoDB raw)
+
+    // if you project it
+    distanceInKm?: number;
+}
+
+export type HospitalDetailsType = {
+    hospital: {
+        _id: string;
+        name: string;
+        address: {
+            house: string;
+            street: string;
+            city: string;
+            postalCode: string;
+        };
+        contactNumber: string;
+        specialties: string[];
+        image?: {
+            url?: string;
+        };
+        location: {
+            type: "Point";
+            coordinates: [number, number];
+        };
+        createdAt: string;
+        updatedAt: string;
+    };
+
+    stats: {
+        totalDoctors: number;
+        totalDepartments: number;
+    };
+
+    departments: Array<{
+        department: string;
+        doctorCount: number;
+        doctors: Array<{
+            doctorId: string;
+            user: {
+                fullName: string;
+                email: string;
+                phoneNumber: string;
+                image?: {
+                    url?: string;
+                    publicId?: string;
+                };
+            };
+            consultationFee: number;
+            chamberNumber: string;
+            slotDuration: number;
+            schedule: Array<{
+                dayOfWeek: "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+                startTime: string;
+                endTime: string;
+            }>;
+        }>;
+    }>;
+};
