@@ -222,53 +222,61 @@ const HospitalDetailsPage = () => {
                             {/* Doctors Cards Grid inside Department */}
                             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {dept.doctors.map((doc, docIdx) => (
-                                    <div key={docIdx} className="group relative border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all duration-200 bg-white flex flex-col justify-between">
-                                        <div>
+                                    <div
+                                        key={docIdx}
+                                        className="group relative border border-gray-100 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 bg-white flex flex-col justify-between"
+                                    >
+                                        {/* Main Content Area */}
+                                        <div className="space-y-4">
                                             {/* Doctor Main Row */}
                                             <div className="flex gap-4 items-start">
                                                 {doc.user.image?.url ? (
                                                     <img
                                                         src={doc.user.image.url}
                                                         alt={doc.user.fullName}
-                                                        className="w-14 h-14 object-cover rounded-xl border shadow-sm shrink-0"
+                                                        className="w-14 h-14 object-cover rounded-xl border border-gray-100 shadow-xs shrink-0"
                                                     />
                                                 ) : (
-                                                    <div className="w-14 h-14 bg-linear-to-br from-gray-100 to-gray-200 text-gray-500 rounded-xl flex items-center justify-center shrink-0 border">
-                                                        <Stethoscope size={24} className="opacity-60" />
+                                                    <div className="w-14 h-14 bg-linear-to-br from-gray-50 to-gray-100 text-gray-400 rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
+                                                        <Stethoscope size={24} className="opacity-70" />
                                                     </div>
                                                 )}
-                                                <div className="space-y-1">
-                                                    <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+                                                <div className="space-y-0.5">
+                                                    <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200 text-base">
                                                         {doc.user.fullName}
                                                     </h4>
-                                                    <p className="text-xs text-gray-500">{doc.user.email}</p>
-                                                    <p className="text-xs text-gray-500">{doc.user.phoneNumber}</p>
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100/40">
+                                                        Registered Doctor
+                                                    </span>
                                                 </div>
                                             </div>
 
                                             {/* Consultation Meta Data */}
-                                            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-50 text-xs">
-                                                <div className="bg-gray-50 p-2 rounded-lg">
-                                                    <p className="text-gray-400 font-medium">Chamber</p>
+                                            <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+                                                <div className="bg-gray-50/70 p-2.5 rounded-xl border border-gray-100/50">
+                                                    <p className="text-gray-400 font-medium mb-0.5">Chamber</p>
                                                     <p className="font-semibold text-gray-700">{doc.chamberNumber}</p>
                                                 </div>
-                                                <div className="bg-gray-50 p-2 rounded-lg">
-                                                    <p className="text-gray-400 font-medium">Slot Duration</p>
+                                                <div className="bg-gray-50/70 p-2.5 rounded-xl border border-gray-100/50">
+                                                    <p className="text-gray-400 font-medium mb-0.5">Slot Duration</p>
                                                     <p className="font-semibold text-gray-700">{doc.slotDuration} Mins</p>
                                                 </div>
                                             </div>
 
                                             {/* Schedule Timing Row */}
-                                            <div className="mt-4 space-y-1.5">
-                                                <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                                            <div className="space-y-2">
+                                                <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
                                                     <Calendar size={14} className="text-gray-400" /> Visiting Hours:
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {doc.schedule.map((sch, schIdx) => (
-                                                        <div key={schIdx} className="bg-slate-50 border border-slate-100 text-[11px] text-slate-700 px-2 py-1 rounded flex items-center gap-1 shadow-2xs">
-                                                            <span className="font-bold text-blue-600">{sch.dayOfWeek}</span>
-                                                            <Clock size={10} className="text-gray-400" />
-                                                            <span>{sch.startTime} - {sch.endTime}</span>
+                                                        <div
+                                                            key={schIdx}
+                                                            className="bg-slate-50/80 border border-slate-200/60 text-[11px] text-gray-600 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs"
+                                                        >
+                                                            <span className="font-bold text-blue-600 uppercase text-[10px]">{sch.dayOfWeek}</span>
+                                                            <Clock size={11} className="text-gray-400" />
+                                                            <span className="font-medium">{sch.startTime} - {sch.endTime}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -276,23 +284,23 @@ const HospitalDetailsPage = () => {
                                         </div>
 
                                         {/* Fee & Action Bottom Panel */}
-                                        <div className="mt-5 pt-3 border-t border-dashed border-gray-100 flex items-center justify-between">
-                                            <div className="flex items-center text-emerald-600">
-                                                <DollarSign size={16} className="-mr-0.5" />
-                                                <span className="text-base font-bold">{doc.consultationFee}</span>
-                                                <span className="text-xs text-gray-400 font-normal ml-0.5">/ visit</span>
+                                        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-baseline text-emerald-600">
+                                                <DollarSign size={16} className="self-center -mr-0.5" />
+                                                <span className="text-lg font-bold tracking-tight">{doc.consultationFee}</span>
+                                                <span className="text-xs text-gray-400 font-normal ml-1">/ visit</span>
                                             </div>
+
                                             {(!user || user.role === "patient") && (
                                                 <button
                                                     onClick={() => handleAppointment(doc.doctorId)}
-                                                    className="bg-blue-50 text-blue-600 cursor-pointer disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-2xs"
+                                                    className="bg-blue-600 text-white cursor-pointer disabled:cursor-not-allowed hover:bg-blue-700 active:scale-[0.98] transition-all text-xs font-medium px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm hover:shadow-blue-100"
                                                 >
                                                     Book Appointment
-                                                    <ChevronRight size={14} />
+                                                    <ChevronRight size={14} className="ml-0.5" />
                                                 </button>
                                             )}
                                         </div>
-
                                     </div>
                                 ))}
                             </div>

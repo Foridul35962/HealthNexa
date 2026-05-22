@@ -139,11 +139,8 @@ export type HospitalDetailsType = {
             doctorId: string;
             user: {
                 fullName: string;
-                email: string;
-                phoneNumber: string;
                 image?: {
                     url?: string;
-                    publicId?: string;
                 };
             };
             consultationFee: number;
