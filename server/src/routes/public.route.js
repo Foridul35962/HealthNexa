@@ -9,5 +9,7 @@ publicRouter.post("/get-nearest-shop", controller.getNearestPharmacy)
 publicRouter.get("/medicine/:medicineId", controller.getMedicine)
 publicRouter.post("/nearest-hospital", controller.getNearestHospitals)
 publicRouter.get("/hospital-details/:hospitalId", controller.getHospitalDetails)
+publicRouter.get("/hospitalName/:hospitalName", controller.getHospitalName)
+publicRouter.post("/get-doctors/:searchParams", controller.getDoctors)
 
 export default publicRouter

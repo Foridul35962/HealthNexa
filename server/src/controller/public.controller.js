@@ -408,8 +408,6 @@ export const getHospitalDetails = AsyncHandler(async (req, res) => {
                         doctorId: "$_id",
                         user: {
                             fullName: "$user.fullName",
-                            email: "$user.email",
-                            phoneNumber: "$user.phoneNumber",
                             image: "$user.image"
                         },
                         consultationFee: "$consultationFee",
@@ -467,3 +465,277 @@ export const getHospitalDetails = AsyncHandler(async (req, res) => {
             )
         );
 });
+
+export const getHospitalName = AsyncHandler(async (req, res) => {
+    const { hospitalName } = req.params
+    if (!hospitalName) {
+        throw new ApiErrors(400, "hospital name is required")
+    }
+
+    const hospitals = await Hospitals.find({
+        name: {
+            $regex: hospitalName,
+            $options: "i"
+        }
+    })
+        .select("_id name")
+        .limit(10)
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, hospitals, "hospital name fetch done")
+        )
+
+})
+
+export const getDoctors = [
+    check("location.lat")
+        .notEmpty()
+        .withMessage("latitude is required")
+        .isFloat({ min: -90, max: 90 })
+        .withMessage("invalid latitude"),
+
+    check("location.lon")
+        .notEmpty()
+        .withMessage("longitude is required")
+        .isFloat({ min: -180, max: 180 })
+        .withMessage("invalid longitude"),
+
+    AsyncHandler(async (req, res) => {
+
+        const error = validationResult(req);
+
+        if (!error.isEmpty()) {
+            throw new ApiErrors(
+                400,
+                "validation failed",
+                error.array()
+            );
+        }
+
+        const { location } = req.body;
+
+        const { searchParams } = req.params;
+
+        const parsedParams = new URLSearchParams(searchParams);
+
+        const hospital = parsedParams.get("hospital") || undefined;
+        const department = parsedParams.get("department") || undefined;
+        const doctorName = parsedParams.get("doctorName") || undefined;
+        const page = Number(parsedParams.get("page")) || 1;
+
+        if (hospital && !mongoose.isValidObjectId(hospital)) {
+            throw new ApiErrors(400, "invalid hospital id")
+        }
+
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        const redisKey = `doctors:${JSON.stringify({
+            lat: location.lat,
+            lon: location.lon,
+            hospital: hospital || "",
+            department: department || "",
+            doctorName: doctorName || "",
+            page
+        })}`;
+
+        const cachedDoctors = await redis.get(redisKey);
+
+        if (cachedDoctors) {
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedDoctors),
+                    "doctor fetch successfully"
+                )
+            );
+        }
+
+        const doctorMatchStage = {};
+
+        if (department) {
+            doctorMatchStage.department = {
+                $regex: department,
+                $options: "i"
+            };
+        }
+
+        const doctors = await Doctors.aggregate([
+
+            {
+                $match: doctorMatchStage
+            },
+
+            // USER JOIN
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+
+            // DOCTOR NAME SEARCH
+            ...(doctorName
+                ? [{
+                    $match: {
+                        "user.fullName": {
+                            $regex: doctorName,
+                            $options: "i"
+                        }
+                    }
+                }]
+                : []),
+
+            {
+                $lookup: {
+                    from: "hospitals",
+                    let: { hospitalId: "$hospitalId" },
+                    pipeline: [
+
+                        // MATCH BY ID
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$hospitalId"]
+                                }
+                            }
+                        },
+                        ...(hospital
+                            ? [{
+                                $match:
+                                    { _id: new mongoose.Types.ObjectId(hospital) }
+                            }]
+                            : []),
+
+                        // DISTANCE CALC
+                        {
+                            $addFields: {
+                                distanceInKm: {
+                                    $round: [
+                                        {
+                                            $divide: [
+                                                {
+                                                    $sqrt: {
+                                                        $add: [
+                                                            {
+                                                                $pow: [
+                                                                    {
+                                                                        $subtract: [
+                                                                            { $arrayElemAt: ["$location.coordinates", 0] },
+                                                                            Number(location.lon)
+                                                                        ]
+                                                                    },
+                                                                    2
+                                                                ]
+                                                            },
+                                                            {
+                                                                $pow: [
+                                                                    {
+                                                                        $subtract: [
+                                                                            { $arrayElemAt: ["$location.coordinates", 1] },
+                                                                            Number(location.lat)
+                                                                        ]
+                                                                    },
+                                                                    2
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                111
+                                            ]
+                                        },
+                                        2
+                                    ]
+                                }
+                            }
+                        },
+
+                        {
+                            $project: {
+                                name: 1,
+                                distanceInKm: 1
+                            }
+                        }
+                    ],
+                    as: "hospital"
+                }
+            },
+
+            {
+                $match: {
+                    hospital: { $ne: [] }
+                }
+            },
+
+            {
+                $sort: {
+                    "hospital.0.distanceInKm": 1
+                }
+            },
+
+            {
+                $facet: {
+                    doctors: [
+                        { $skip: skip },
+                        { $limit: limit },
+
+                        {
+                            $project: {
+                                _id: 1,
+                                department: 1,
+                                consultationFee: 1,
+
+                                doctor: {
+                                    _id: "$user._id",
+                                    name: "$user.fullName",
+                                    image: {
+                                        $ifNull: ["$user.image.url", null]
+                                    }
+                                },
+
+                                hospital: {
+                                    $arrayElemAt: ["$hospital", 0]
+                                }
+                            }
+                        }
+                    ],
+
+                    totalDoctors: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ]);
+
+        const doctorList = doctors?.[0]?.doctors || [];
+        const totalDoctors = doctors?.[0]?.totalDoctors?.[0]?.count || 0;
+
+        const responseData = {
+            currentPage: page,
+            totalPages: Math.ceil(totalDoctors / limit),
+            totalDoctors,
+            doctors: doctorList
+        };
+
+        await redis.set(
+            redisKey,
+            JSON.stringify(responseData),
+            "EX",
+            300
+        );
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, responseData, "doctor fetch successfully")
+            );
+    })
+];

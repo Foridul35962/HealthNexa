@@ -154,3 +154,33 @@ export type HospitalDetailsType = {
         }>;
     }>;
 };
+
+export interface hospitalNameType {
+    _id: string
+    name: string
+}
+
+export interface DoctorsResponseData {
+    currentPage: number;
+    totalPages: number;
+    totalDoctors: number;
+
+    doctors: DoctorItem[];
+}
+
+export interface DoctorItem {
+    _id: string;
+    department: string;
+    consultationFee: number;
+
+    doctor: {
+        _id: string;
+        name: string;
+        image?: string;
+    };
+
+    hospital: {
+        _id?: string;
+        name: string;
+    };
+}

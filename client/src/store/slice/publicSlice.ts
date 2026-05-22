@@ -1,5 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
-import { GetNearestShopRequestType, HospitalDetailsType, MedicineDetailsType, medicineNameType, NearestHospitalType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
+import { DoctorsResponseData, GetNearestShopRequestType, HospitalDetailsType, hospitalNameType, MedicineDetailsType, medicineNameType, NearestHospitalType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -91,6 +91,35 @@ export const getHospitalDetails = createAsyncThunk(
     }
 )
 
+export const getHospitalNames = createAsyncThunk(
+    "public/getHospitalName",
+    async ({ hospitalName }: { hospitalName: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/hospitalName/${hospitalName}`)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const getDoctors = createAsyncThunk(
+    "public/getDoctors",
+    async ({ searchUrl, data }: {
+        searchUrl: string,
+        data: publicLocationType
+    }, { rejectWithValue }) => {
+        try {
+            const res = await axios.post(`${SERVER_URL}/get-doctors/${searchUrl}`, data)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     fetchLoading: boolean
     publicLoading: boolean
@@ -101,6 +130,8 @@ interface initialStateType {
     medicineDetails: MedicineDetailsType | null
     nearestHospitals: NearestHospitalType[]
     hospitalDetails: HospitalDetailsType | null
+    hospitalNames: hospitalNameType[]
+    doctorslist: DoctorsResponseData
 }
 
 const initialState: initialStateType = {
@@ -112,7 +143,14 @@ const initialState: initialStateType = {
     nearestShop: [],
     medicineDetails: null,
     nearestHospitals: [],
-    hospitalDetails: null
+    hospitalDetails: null,
+    hospitalNames: [],
+    doctorslist: {
+        currentPage: 1,
+        totalPages: 0,
+        totalDoctors: 0,
+        doctors: []
+    }
 }
 
 const publicSlice = createSlice({
@@ -180,6 +218,23 @@ const publicSlice = createSlice({
                 state.hospitalDetails = action.payload.data
             })
             .addCase(getHospitalDetails.rejected, (state) => {
+                state.fetchLoading = false
+            })
+        //get hospital name
+        builder
+            .addCase(getHospitalNames.fulfilled, (state,action)=>{
+                state.hospitalNames = action.payload.data
+            })
+        // get doctor list
+        builder
+            .addCase(getDoctors.pending, (state)=>{
+                state.fetchLoading = true
+            })
+            .addCase(getDoctors.fulfilled, (state, action)=>{
+                state.fetchLoading = false
+                state.doctorslist = action.payload.data
+            })
+            .addCase(getDoctors.rejected, (state)=>{
                 state.fetchLoading = false
             })
     }
