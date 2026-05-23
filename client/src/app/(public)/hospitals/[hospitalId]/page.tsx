@@ -23,7 +23,6 @@ import {
 const HospitalDetailsPage = () => {
     const dispatch = useDispatch<AppDispatch>()
     const { fetchLoading, hospitalDetails } = useSelector((state: RootState) => state.public)
-    const { user } = useSelector((state: RootState) => state.auth)
     const { hospitalId } = useParams()
 
     useEffect(() => {
@@ -286,16 +285,13 @@ const HospitalDetailsPage = () => {
                                                 <span className="text-lg font-bold tracking-tight">{doc.consultationFee}</span>
                                                 <span className="text-xs text-gray-400 font-normal ml-1">/ visit</span>
                                             </div>
-
-                                            {(!user || user.role === "patient") && (
-                                                <Link
-                                                    href={`/doctors/${doc.doctorId}`}
-                                                    className="bg-blue-600 text-white cursor-pointer disabled:cursor-not-allowed hover:bg-blue-700 active:scale-[0.98] transition-all text-xs font-medium px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm hover:shadow-blue-100"
-                                                >
-                                                    View Details
-                                                    <ChevronRight size={14} className="ml-0.5" />
-                                                </Link>
-                                            )}
+                                            <Link
+                                                href={`/doctors/${doc.doctorId}`}
+                                                className="bg-blue-600 text-white cursor-pointer disabled:cursor-not-allowed hover:bg-blue-700 active:scale-[0.98] transition-all text-xs font-medium px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm hover:shadow-blue-100"
+                                            >
+                                                View Details
+                                                <ChevronRight size={14} className="ml-0.5" />
+                                            </Link>
                                         </div>
                                     </div>
                                 ))}
