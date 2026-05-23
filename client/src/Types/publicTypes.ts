@@ -184,3 +184,52 @@ export interface DoctorItem {
         name: string;
     };
 }
+
+export interface DoctorByIdDataType {
+    _id: string;
+
+    userId: DoctorUser;
+
+    hospitalId: DoctorHospital;
+
+    department: string;
+    chamberNumber: string;
+    consultationFee: number;
+    slotDuration: number;
+
+    schedule: DoctorSchedule[];
+
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface DoctorUser {
+    _id: string;
+    fullName: string;
+
+    image?: {
+        url?: string;
+    };
+}
+
+export interface DoctorHospital {
+    _id: string;
+
+    name: string;
+
+    address: {
+        house: string;
+        street: string;
+        city: string;
+        postalCode: string;
+    };
+}
+
+export interface DoctorSchedule {
+    _id: string;
+
+    dayOfWeek: "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+
+    startTime: string;
+    endTime: string;
+}

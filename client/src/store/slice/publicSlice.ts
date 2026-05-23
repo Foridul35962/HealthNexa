@@ -1,5 +1,5 @@
 import { HosAdminEditDoctorType } from "@/Types/hospitalAdminTypes";
-import { DoctorsResponseData, GetNearestShopRequestType, HospitalDetailsType, hospitalNameType, MedicineDetailsType, medicineNameType, NearestHospitalType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
+import { DoctorByIdDataType, DoctorsResponseData, GetNearestShopRequestType, HospitalDetailsType, hospitalNameType, MedicineDetailsType, medicineNameType, NearestHospitalType, PharmacyMedicineItemType, publicLocationType } from "@/Types/publicTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -120,6 +120,19 @@ export const getDoctors = createAsyncThunk(
     }
 )
 
+export const getDoctorById = createAsyncThunk(
+    "public/getDoctorById",
+    async ({ doctorId }: { doctorId: string }, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/get-doctor-by-id/${doctorId}`)
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     fetchLoading: boolean
     publicLoading: boolean
@@ -132,6 +145,7 @@ interface initialStateType {
     hospitalDetails: HospitalDetailsType | null
     hospitalNames: hospitalNameType[]
     doctorslist: DoctorsResponseData
+    doctorInfo: DoctorByIdDataType | null
 }
 
 const initialState: initialStateType = {
@@ -150,7 +164,8 @@ const initialState: initialStateType = {
         totalPages: 0,
         totalDoctors: 0,
         doctors: []
-    }
+    },
+    doctorInfo: null
 }
 
 const publicSlice = createSlice({
@@ -222,19 +237,30 @@ const publicSlice = createSlice({
             })
         //get hospital name
         builder
-            .addCase(getHospitalNames.fulfilled, (state,action)=>{
+            .addCase(getHospitalNames.fulfilled, (state, action) => {
                 state.hospitalNames = action.payload.data
             })
         // get doctor list
         builder
-            .addCase(getDoctors.pending, (state)=>{
+            .addCase(getDoctors.pending, (state) => {
                 state.fetchLoading = true
             })
-            .addCase(getDoctors.fulfilled, (state, action)=>{
+            .addCase(getDoctors.fulfilled, (state, action) => {
                 state.fetchLoading = false
                 state.doctorslist = action.payload.data
             })
-            .addCase(getDoctors.rejected, (state)=>{
+            .addCase(getDoctors.rejected, (state) => {
+                state.fetchLoading = false
+            })
+        builder
+            .addCase(getDoctorById.pending, (state) => {
+                state.fetchLoading = true
+            })
+            .addCase(getDoctorById.fulfilled, (state, action) => {
+                state.fetchLoading = false
+                state.doctorInfo = action.payload.data
+            })
+            .addCase(getDoctorById.rejected, (state) => {
                 state.fetchLoading = false
             })
     }
