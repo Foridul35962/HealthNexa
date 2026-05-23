@@ -6,16 +6,59 @@ import redis from "../config/redis.js";
 import ApiErrors from "../helpers/ApiErrors.js";
 import ApiResponse from "../helpers/ApiResponse.js";
 import AsyncHandler from "../helpers/AsyncHandler.js";
+import SymptomChecker from "../models/SymptomChecker.model.js";
+
+
+// =========================
+// CACHE KEY
+// =========================
 
 const makeCacheKey = (body) => {
     return (
-        "ai:symptom:v1:" +
+        "ai:symptom:v3:" +
         crypto
             .createHash("sha256")
             .update(JSON.stringify(body))
             .digest("hex")
     );
 };
+
+
+// =========================
+// SAVE FUNCTION
+// =========================
+
+const saveResult = async (result, userInfo, userId) => {
+
+    const saved = await SymptomChecker.create({
+        userId: userId || null,
+
+        patientInfo: {
+            age: userInfo.age,
+            gender: userInfo.gender,
+        },
+
+        input: {
+            symptoms: userInfo.symptoms,
+            duration: userInfo.duration,
+            temperature: userInfo.temperature,
+            bloodPressure: userInfo.bloodPressure,
+            existingConditions: userInfo.existingConditions || [],
+            currentMedications: userInfo.currentMedications || [],
+            allergies: userInfo.allergies || [],
+            additionalNotes: userInfo.additionalNotes,
+        },
+
+        aiResult: result,
+    });
+
+    return saved;
+};
+
+
+// =========================
+// CONTROLLER
+// =========================
 
 export const checkSymptoms = AsyncHandler(async (req, res) => {
 
@@ -33,7 +76,7 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
     } = req.body;
 
     // =========================
-    // Validation
+    // VALIDATION
     // =========================
 
     if (
@@ -43,53 +86,48 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
         !Array.isArray(symptoms) ||
         symptoms.length === 0
     ) {
-        throw new ApiErrors(
-            400,
-            "Age, gender and symptoms are required"
-        );
-    }
-
-    if (typeof age !== "number" || age < 0 || age > 120) {
-        throw new ApiErrors(
-            400,
-            "Invalid age"
-        );
-    }
-
-    const allowedGender = [
-        "male",
-        "female",
-        "other"
-    ];
-
-    if (!allowedGender.includes(gender)) {
-        throw new ApiErrors(
-            400,
-            "Invalid gender"
-        );
+        throw new ApiErrors(400, "Age, gender and symptoms required");
     }
 
     // =========================
-    // Cache Check
+    // CACHE CHECK
     // =========================
 
     const cacheKey = makeCacheKey(req.body);
-
     const cached = await redis.get(cacheKey);
 
     if (cached) {
 
+        const parsed = JSON.parse(cached);
+
+        const saved = await saveResult(
+            parsed,
+            {
+                age,
+                gender,
+                symptoms,
+                duration,
+                temperature,
+                bloodPressure,
+                existingConditions,
+                currentMedications,
+                allergies,
+                additionalNotes,
+            },
+            req.user?._id
+        );
+
         return res.status(200).json(
             new ApiResponse(
                 200,
-                JSON.parse(cached),
-                "Symptom analysis fetched from cache"
+                saved,
+                "Fetched from cache"
             )
         );
     }
 
     // =========================
-    // Rate Limit
+    // RATE LIMIT
     // =========================
 
     const limitKey = "gemini:symptom:limit";
@@ -101,66 +139,33 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
     }
 
     if (count > 10) {
-
         const ttl = await redis.ttl(limitKey);
-
-        throw new ApiErrors(
-            429,
-            `AI request limit exceeded. Try again in ${ttl}s`
-        );
+        throw new ApiErrors(429, `Try again in ${ttl}s`);
     }
 
     // =========================
-    // Gemini Model
+    // GEMINI MODEL
     // =========================
 
     const model = genAI.getGenerativeModel({
-
         model: "gemini-2.5-flash-lite",
-
         systemInstruction: `
-            You are a professional AI medical triage assistant for a healthcare platform.
+            You are a professional AI medical triage assistant.
 
-            You are NOT a doctor and must NEVER provide final medical diagnosis.
+            You are NOT a doctor and must NEVER give a final diagnosis.
 
-            Your responsibilities:
-            - Analyze patient symptoms carefully
-            - Estimate urgency level
-            - Suggest appropriate medical department
-            - Provide safe preliminary guidance
-            - Detect emergency warning signs
-            - Encourage professional medical consultation when needed
+            ========================
+            CRITICAL RULES
+            ========================
+            - Never diagnose diseases
+            - Use "may indicate", "possible", "could be related to"
+            - No medication dosage
+            - Detect emergencies carefully
 
-            CRITICAL SAFETY RULES:
-
-            - Never claim certainty.
-            - Never say a patient definitely has a disease.
-            - Use phrases like:
-            - "may indicate"
-            - "possible condition"
-            - "could be related to"
-            - "requires medical evaluation"
-
-            - Never prescribe prescription medications.
-            - Never provide medication dosage.
-            - Never recommend dangerous treatment.
-            - Never ignore emergency symptoms.
-
-            Emergency symptoms include:
-            - chest pain
-            - difficulty breathing
-            - stroke symptoms
-            - seizures
-            - severe bleeding
-            - unconsciousness
-            - suicidal thoughts
-            - severe allergic reactions
-
-            IMPORTANT:
-            - Return ONLY valid JSON
-            - No markdown
-            - No explanation outside JSON
-            - No code blocks
+            ========================
+            IMPORTANT RULE
+            ========================
+            You MUST ONLY select departments from this list:
 
             Allowed departments:
             [
@@ -178,13 +183,16 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
             "Emergency"
             ]
 
-            Return JSON in this exact structure:
+            If you choose a department, it MUST be from this list only.
+
+            ========================
+            OUTPUT RULES
+            ========================
+            Return ONLY valid JSON. No markdown. No extra text.
 
             {
             "success": true,
-
             "summary": "",
-
             "possibleConditions": [
                 {
                 "name": "",
@@ -192,91 +200,66 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
                 "reason": ""
                 }
             ],
-
             "emergencyLevel": {
                 "level": "low | moderate | high | critical",
                 "reason": ""
             },
-
             "recommendedDepartment": [
                 {
                 "department": "",
                 "reason": ""
                 }
             ],
-
             "immediateActions": [],
-
             "homeCareSuggestions": [],
-
             "redFlags": [],
-
             "whenToSeeDoctor": "",
-
-            "disclaimer": "This AI system does not provide final medical diagnosis. Please consult a licensed doctor for medical evaluation."
+            "disclaimer": "This is not a medical diagnosis."
             }
         `
     });
 
     // =========================
-    // User Prompt
+    // USER PROMPT
     // =========================
 
     const userPrompt = `
         Patient Information:
 
         Age: ${age}
-
         Gender: ${gender}
 
         Symptoms:
-        ${symptoms.map((s) => `- ${s}`).join("\n")}
+        ${symptoms.map(s => `- ${s}`).join("\n")}
 
-        Duration:
-        ${duration || "Not Provided"}
-
-        Temperature:
-        ${temperature || "Not Provided"}
-
-        Blood Pressure:
-        ${bloodPressure || "Not Provided"}
+        Duration: ${duration || "Not Provided"}
+        Temperature: ${temperature || "Not Provided"}
+        Blood Pressure: ${bloodPressure || "Not Provided"}
 
         Existing Conditions:
-        ${existingConditions?.length
-                ? existingConditions.join(", ")
-                : "None"}
+        ${existingConditions?.length ? existingConditions.join(", ") : "None"}
 
         Current Medications:
-        ${currentMedications?.length
-                ? currentMedications.join(", ")
-                : "None"}
+        ${currentMedications?.length ? currentMedications.join(", ") : "None"}
 
         Allergies:
-        ${allergies?.length
-                ? allergies.join(", ")
-                : "None"}
+        ${allergies?.length ? allergies.join(", ") : "None"}
 
         Additional Notes:
         ${additionalNotes || "None"}
 
-        Analyze the patient's condition carefully and return ONLY valid JSON.
+        Return ONLY JSON.
     `;
 
     try {
 
         const result = await model.generateContent({
-
             contents: [
                 {
                     role: "user",
-                    parts: [
-                        {
-                            text: userPrompt
-                        }
-                    ]
+                    parts: [{ text: userPrompt }]
                 }
             ],
-
             generationConfig: {
                 temperature: 0.2,
                 responseMimeType: "application/json",
@@ -285,43 +268,61 @@ export const checkSymptoms = AsyncHandler(async (req, res) => {
 
         const text = result.response.text();
 
-        let parsedResponse;
+        let parsed;
 
         try {
-
-            parsedResponse = JSON.parse(text);
-
+            parsed = JSON.parse(text);
         } catch {
-
-            throw new ApiErrors(
-                500,
-                "Invalid AI response format"
-            );
+            throw new ApiErrors(500, "Invalid AI response format");
         }
 
         // =========================
-        // Cache Save
+        // SAVE TO CACHE
         // =========================
 
         await redis.set(
             cacheKey,
-            JSON.stringify(parsedResponse),
+            JSON.stringify(parsed),
             "EX",
             60 * 60
         );
 
-        return res.status(200).json(
+        // =========================
+        // SAVE TO DB
+        // =========================
 
+        const saved = await saveResult(
+            parsed,
+            {
+                age,
+                gender,
+                symptoms,
+                duration,
+                temperature,
+                bloodPressure,
+                existingConditions,
+                currentMedications,
+                allergies,
+                additionalNotes,
+            },
+            req.user?._id
+        );
+
+        // =========================
+        // RESPONSE
+        // =========================
+
+        return res.status(200).json(
             new ApiResponse(
                 200,
-                parsedResponse,
+                saved,
                 "Symptoms analyzed successfully"
             )
         );
 
     } catch (error) {
 
-        console.error("AI Symptom Checker Error:", error);
+        console.error(error);
 
         throw new ApiErrors(
             500,
