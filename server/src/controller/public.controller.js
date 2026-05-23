@@ -739,3 +739,50 @@ export const getDoctors = [
             );
     })
 ];
+
+export const getDoctorById = AsyncHandler(async (req, res) => {
+    const { doctorId } = req.params
+    if (!doctorId) {
+        throw new ApiErrors(400, "doctor id is required")
+    }
+
+    if (!mongoose.isValidObjectId(doctorId)) {
+        throw new ApiErrors(400, "invalid doctorId")
+    }
+
+    const redisKey = `doctor:${doctorId}`
+    let doctor
+
+    const redisDoctor = await redis.get(redisKey)
+    if (redisDoctor) {
+        doctor = JSON.parse(redisDoctor)
+    } else {
+        doctor = await Doctors.findById(doctorId)
+            .populate([
+                {
+                    path: "userId",
+                    select: "fullName image.url"
+                },
+                {
+                    path: "hospitalId",
+                    select: "_id name address"
+                }
+            ])
+            .lean()
+
+        if (!doctor) {
+            throw new ApiErrors(404, "doctor not found")
+        }
+
+        await redis.set(redisKey,
+            JSON.stringify(doctor),
+            "EX", 600
+        )
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, doctor, "doctor fetch done")
+        )
+})
