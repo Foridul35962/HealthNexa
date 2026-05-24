@@ -19,7 +19,7 @@ export const getAllAISymptom = AsyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
 
     // redis key
-    const redisKey = `allSymptoms:${userId}:page:${page}:limit:${limit}`;
+    const redisKey = `allSymptoms:${userId}:page:${page}`;
 
     let allSymptoms;
 
@@ -34,6 +34,17 @@ export const getAllAISymptom = AsyncHandler(async (req, res) => {
             SymptomChecker.find({
                 userId,
             })
+                .select(
+                    "_id " +
+                    "patientInfo.age " +
+                    "patientInfo.gender " +
+                    "input.symptoms " +
+                    "input.duration " +
+                    "aiResult.summary " +
+                    "aiResult.emergencyLevel.level " +
+                    "aiResult.recommendedDepartment.department " +
+                    "createdAt"
+                )
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)

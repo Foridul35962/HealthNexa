@@ -52,6 +52,8 @@ const saveResult = async (result, userInfo, userId) => {
         aiResult: result,
     });
 
+    await redis.del(`allSymptoms:${userId}:page:${1}`)
+
     return saved;
 };
 

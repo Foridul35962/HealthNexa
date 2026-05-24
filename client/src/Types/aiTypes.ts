@@ -89,3 +89,42 @@ export interface SymptomCheckResponseType {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface GetAllAISymptomsResponseType {
+    data: AISymptomHistoryItem[];
+
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
+export interface AISymptomHistoryItem {
+    _id: string;
+
+    patientInfo: {
+        age: number;
+        gender: "male" | "female" | "other";
+    };
+
+    input: {
+        symptoms: string[];
+        duration?: string;
+    };
+
+    aiResult: {
+        summary?: string;
+
+        emergencyLevel: {
+            level: "low" | "moderate" | "high" | "critical";
+        };
+
+        recommendedDepartment: {
+            department: string;
+        }[];
+    };
+
+    createdAt: string;
+}
