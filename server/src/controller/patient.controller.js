@@ -4,6 +4,10 @@ import ApiErrors from "../helpers/ApiErrors.js";
 import ApiResponse from "../helpers/ApiResponse.js";
 import AsyncHandler from "../helpers/AsyncHandler.js";
 import SymptomChecker from "../models/SymptomChecker.model.js";
+import Doctors from "../models/Doctors.model.js";
+import Appointments from "../models/Appointments.model.js";
+import crypto from "crypto";
+import QRCode from "qrcode";
 
 
 export const getAllAISymptom = AsyncHandler(async (req, res) => {
@@ -166,5 +170,455 @@ export const deleteSymptomById = AsyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(200, symptomId, "symptom delete successfully")
+        )
+})
+
+
+// convert "10:30" -> minutes
+const timeToMinutes = (time) => {
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + m;
+};
+
+// convert minutes -> "10:30"
+const minutesToTime = (mins) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// Get day string
+const getDayName = (date) => {
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
+};
+
+export const addAppointment = AsyncHandler(async (req, res) => {
+    const patientId = req.user._id;
+    const { doctorId } = req.body;
+
+    if (!doctorId) {
+        throw new ApiErrors(400, "doctorId is required");
+    }
+
+
+    const redisKey = `doctor:${doctorId}`;
+
+    const redisDoctor = await redis.get(redisKey);
+
+    let doctor;
+
+    if (redisDoctor) {
+        doctor = JSON.parse(redisDoctor);
+    } else {
+        doctor = await Doctors.findById(doctorId)
+            .populate([
+                {
+                    path: "userId",
+                    select: "fullName image.url"
+                },
+                {
+                    path: "hospitalId",
+                    select: "_id name address"
+                }
+            ])
+            .lean();
+
+        if (!doctor) {
+            throw new ApiErrors(404, "Doctor not found");
+        }
+
+        await redis.set(
+            redisKey,
+            JSON.stringify(doctor),
+            "EX",
+            600
+        );
+    }
+
+
+    const now = new Date();
+
+    const next7Days = new Date();
+    next7Days.setDate(next7Days.getDate() + 7);
+
+    const existingAppointment = await Appointments.findOne({
+        doctorId,
+        patientId,
+        status: {
+            $in: ["Booked", "Pending"]
+        },
+        date: {
+            $gte: now,
+            $lte: next7Days
+        }
+    });
+
+    if (existingAppointment) {
+        throw new ApiErrors(
+            400,
+            "You already have an active appointment with this doctor"
+        );
+    }
+
+    // Find Available Slot
+
+    const slotDuration = doctor.slotDuration;
+
+    let foundSlot = null;
+    let selectedDate = null;
+
+    for (let i = 0; i < 7; i++) {
+
+        const currentDate = new Date();
+
+        currentDate.setDate(currentDate.getDate() + i);
+
+        currentDate.setHours(0, 0, 0, 0);
+
+        const dayName = getDayName(currentDate);
+
+        // Doctor schedule for this day
+        const schedule = doctor.schedule.find(
+            (s) => s.dayOfWeek === dayName
+        );
+
+        if (!schedule) continue;
+
+        let start = timeToMinutes(schedule.startTime);
+
+        const end = timeToMinutes(schedule.endTime);
+
+        const slots = [];
+
+        // Current time in minutes
+        const nowMinutes =
+            now.getHours() * 60 + now.getMinutes();
+
+        // Generate slots
+        while (start + slotDuration <= end) {
+
+            // Skip past slots for today
+            if (i === 0 && start <= nowMinutes) {
+                start += slotDuration;
+                continue;
+            }
+
+            const slotStart = minutesToTime(start);
+
+            const slotEnd = minutesToTime(start + slotDuration);
+
+            slots.push({
+                slotStart,
+                slotEnd
+            });
+
+            start += slotDuration;
+        }
+
+        // Day Range
+        const startOfDay = new Date(currentDate);
+
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(currentDate);
+
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Already booked slots
+        const bookedAppointments = await Appointments.find({
+            doctorId,
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            },
+            status: {
+                $in: ["Booked", "Pending"]
+            }
+        }).select("slotStart");
+
+        const bookedSet = new Set(
+            bookedAppointments.map((b) => b.slotStart)
+        );
+
+        // Find first free slot
+        for (const slot of slots) {
+
+            if (!bookedSet.has(slot.slotStart)) {
+
+                foundSlot = slot;
+
+                selectedDate = new Date(currentDate);
+
+                break;
+            }
+        }
+
+        if (foundSlot) break;
+    }
+
+    if (!foundSlot || !selectedDate) {
+        throw new ApiErrors(
+            400,
+            "No available slots in next 7 days"
+        );
+    }
+
+    // Create Appointment
+
+    const qrHash = crypto.randomBytes(16).toString("hex");
+
+    let appointment;
+
+    try {
+        appointment = await Appointments.create({
+            patientId,
+            doctorId,
+            hospitalId: doctor.hospitalId._id,
+            date: selectedDate,
+            slotStart: foundSlot.slotStart,
+            slotEnd: foundSlot.slotEnd,
+            status: "Booked",
+            qrHash
+        });
+
+    } catch (error) {
+
+        // Duplicate slot protection
+        if (error.code === 11000) {
+            throw new ApiErrors(
+                409,
+                "This slot was just booked by someone else. Please try again."
+            );
+        }
+
+        throw error;
+    }
+
+
+    const qrPayload =
+        `${process.env.CORS_ORIGIN}/receptionist/check-in?appointmentId=${appointment._id}&hash=${qrHash}`;
+
+    const qrImage = await QRCode.toDataURL(qrPayload);
+
+    await redis.del(`appointmentHistory:${patientId}:page:${1}`);
+
+    return res.status(201).json(
+        new ApiResponse(
+            201,
+            {
+                appointment,
+                qrImage
+            },
+            "Appointment auto-assigned successfully"
+        )
+    );
+});
+
+export const getAppointmentHistory = AsyncHandler(async (req, res) => {
+    const patientId = req.user._id;
+
+    const limit = 10;
+
+    const page = Number(req.query.page);
+
+    if (!Number.isInteger(page) || page < 1) {
+        throw new ApiErrors(400, "Invalid page number");
+    }
+
+    const skip = (page - 1) * limit;
+
+    const redisKey = `appointmentHistory:${patientId}:page:${page}`;
+
+    const redisAppointments = await redis.get(redisKey);
+
+    let appointments;
+
+    if (redisAppointments) {
+        appointments = JSON.parse(redisAppointments);
+    } else {
+        const [data, total] = await Promise.all([
+            Appointments.find({ patientId })
+                .populate([
+                    {
+                        path: "doctorId",
+                        select: "userId department",
+                        populate: {
+                            path: "userId",
+                            select: "fullName image.url"
+                        }
+                    },
+                    {
+                        path: "hospitalId",
+                        select: "name"
+                    }
+                ])
+                .select("-patientId -slotStart -slotEnd -qrHash -status -checkedIn -isSkipped -tokenNumber")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+
+            Appointments.countDocuments({ patientId })
+        ]);
+
+        appointments = {
+            data,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
+
+        await redis.set(
+            redisKey,
+            JSON.stringify(appointments),
+            "EX",
+            300
+        );
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            appointments,
+            "Appointment history fetched successfully"
+        )
+    );
+});
+
+export const getAppointmentById = AsyncHandler(async (req, res) => {
+    const patientId = req.user._id;
+    const { appointmentId } = req.params;
+
+    if (!appointmentId) {
+        throw new ApiErrors(400, "appointment id is required");
+    }
+
+    const redisKey = `appointment:${appointmentId}`;
+
+    let appointment;
+
+    const redisAppointment = await redis.get(redisKey);
+
+    if (redisAppointment) {
+        appointment = JSON.parse(redisAppointment);
+    } else {
+        appointment = await Appointments.findById(appointmentId)
+            .populate([
+                {
+                    path: "doctorId",
+                    select: "userId chamberNumber department",
+                    populate: {
+                        path: "userId",
+                        select: "fullName"
+                    }
+                },
+                {
+                    path: "hospitalId",
+                    select: "name"
+                }
+            ])
+            .select("-qrHash")
+            .lean();
+
+        if (!appointment) {
+            throw new ApiErrors(404, "Appointment not found");
+        }
+
+        await redis.set(
+            redisKey,
+            JSON.stringify(appointment),
+            "EX",
+            300
+        );
+    }
+
+    if (appointment.patientId.toString() !== patientId.toString()) {
+        throw new ApiErrors(401, "Unauthorized access");
+    }
+
+    let qrImage = null;
+
+    if (appointment.status === "Booked") {
+        const qrPayload =
+            `${process.env.CORS_ORIGIN}/receptionist/check-in?appointmentId=${appointment._id}&hash=${appointment.qrHash}`;
+
+        qrImage = await QRCode.toDataURL(qrPayload);
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            { appointment, qrImage },
+            "Appointment fetched successfully"
+        )
+    );
+});
+
+export const getCurrentToken = AsyncHandler(async (req, res) => {
+    const { doctorId, date } = req.params;
+
+    if (!doctorId || !date) {
+        throw new ApiErrors(400, "doctorId and date are required");
+    }
+
+    const d = new Date(date);
+
+    const formattedDate = `${d.getFullYear()}-${String(
+        d.getMonth() + 1
+    ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    const redisKey = `queue:${doctorId}:${formattedDate}`;
+
+    const currentToken = await redis.get(redisKey) || "0";
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            Number(currentToken),
+            "current token fetch done"
+        )
+    );
+});
+
+export const deleteAppointment = AsyncHandler(async (req, res) => {
+    const patientId = req.user._id
+    const { appointmentId } = req.params
+    if (!appointmentId) {
+        throw new ApiErrors(400, "appointment id is required")
+    }
+
+    const appointment = await Appointments.findById(appointmentId)
+
+    if (!appointment) {
+        throw new ApiErrors(404, "appointment is not found")
+    }
+
+    if (appointment.status !== "Booked") {
+        throw new ApiErrors(400, "appointment is done")
+    }
+
+    if (appointment.patientId.toString() !== patientId.toString()) {
+        throw new ApiErrors(401, "unauthorized access")
+    }
+
+    await appointment.deleteOne()
+    await redis.del(`appointment:${appointmentId}`)
+
+    const historyKeys = await redis.keys(
+        `appointmentHistory:${patientId}:page:*`
+    );
+
+    if (historyKeys.length) {
+        await redis.del(historyKeys);
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, appointmentId, "appointment delete successfully")
         )
 })
