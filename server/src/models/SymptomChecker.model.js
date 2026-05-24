@@ -15,7 +15,6 @@ const symptomCheckSchema = new mongoose.Schema({
             type: String,
             required: true,
             enum: ["male", "female", "other"],
-            required: true
         }
     },
     input: {
