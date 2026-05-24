@@ -1,219 +1,441 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Plus, X, ArrowRight, Lock } from "lucide-react";
-import Link from "next/link";
+import React, { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useDispatch, useSelector } from 'react-redux'
+import { toast } from 'react-toastify'
+import {
+  Activity,
+  User,
+  Clock,
+  Thermometer,
+  HeartPulse,
+  AlertCircle,
+  Pill,
+  ShieldAlert,
+  FileText,
+  Plus,
+  X,
+  Loader2
+} from 'lucide-react'
 
-const commonSymptoms = [
-  "Fever", "Headache", "Cough", "Fatigue", "Sore Throat",
-  "Nausea", "Chest Pain", "Shortness of Breath", "Body Ache", "Dizziness",
-];
+import SymptomCheckerWithOutAI from '@/components/symptomCheck/SymptomCheckWithOutAI'
+import { symptomCheck } from '@/store/slice/aiSlice'
+import { AppDispatch, RootState } from '@/store/store'
+import { useRouter } from 'next/navigation'
 
-const urgencyColors: Record<string, string> = {
-  Low: "bg-green-50 text-green-600 border-green-200",
-  Medium: "bg-yellow-50 text-yellow-600 border-yellow-200",
-  High: "bg-red-50 text-red-600 border-red-200",
-};
+export interface SymptomCheckRequestType {
+  age: number;
+  gender: "male" | "female" | "other";
+  symptoms: string[];
+  duration?: string;
+  temperature?: number;
+  bloodPressure?: string;
+  existingConditions?: string[];
+  currentMedications?: string[];
+  allergies?: string[];
+  additionalNotes?: string;
+}
 
-export default function SymptomCheckerPage() {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [custom, setCustom] = useState("");
-  const [result, setResult] = useState<null | { urgency: string; summary: string }>(null);
-  const [loading, setLoading] = useState(false);
+const Page = () => {
+  const dispatch = useDispatch<AppDispatch>()
+  const { user } = useSelector((state: RootState) => state.auth)
+  const { aiLoading, aiResult } = useSelector((state: RootState) => state.ai)
+  const router = useRouter()
 
-  const toggle = (s: string) => {
-    setSelected((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
-  };
+  // Array inputs internal state tracking for dynamic tags
+  const [currentSymptom, setCurrentSymptom] = useState('')
+  const [currentCondition, setCurrentCondition] = useState('')
+  const [currentMed, setCurrentMed] = useState('')
+  const [currentAllergy, setCurrentAllergy] = useState('')
 
-  const addCustom = () => {
-    const trimmed = custom.trim();
-    if (trimmed && !selected.includes(trimmed)) {
-      setSelected((prev) => [...prev, trimmed]);
+  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<SymptomCheckRequestType>({
+    defaultValues: {
+      age: undefined,
+      gender: "male",
+      symptoms: [],
+      duration: '',
+      temperature: undefined,
+      bloodPressure: '',
+      existingConditions: [],
+      currentMedications: [],
+      allergies: [],
+      additionalNotes: ''
     }
-    setCustom("");
-  };
+  })
 
-  const handleCheck = async () => {
-    if (selected.length === 0) return;
-    setLoading(true);
-    // Simulate a brief AI delay — replace with real API call
-    await new Promise((r) => setTimeout(r, 1500));
-    setResult({ urgency: "Medium", summary: "Based on your symptoms, this may indicate a mild infection or viral illness." });
-    setLoading(false);
-  };
+  // Watch arrays for rendering chips
+  const watchedSymptoms = watch('symptoms') || []
+  const watchedConditions = watch('existingConditions') || []
+  const watchedMeds = watch('currentMedications') || []
+  const watchedAllergies = watch('allergies') || []
+
+  if (!user) {
+    return <SymptomCheckerWithOutAI />
+  }
+
+  const onSubmit = async (data: SymptomCheckRequestType) => {
+    if (watchedSymptoms.length === 0) {
+      toast.error('Please add at least one symptom.')
+      return
+    }
+
+    try {
+      const formattedData = {
+        ...data,
+        age: Number(data.age),
+        temperature: data.temperature ? Number(data.temperature) : undefined
+      }
+      const response = await dispatch(symptomCheck(formattedData)).unwrap()
+
+      if (response && response.data._id) {
+        router.push(`/symptoms/${response.data._id}`)
+      }
+      toast.success('Symptom check completed successfully!')
+    } catch (error: any) {
+      toast.error(error?.message || 'Something went wrong')
+    }
+  }
+
+  // Helper functions to manage array additions/removals
+  const addTag = (
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    fieldName: keyof SymptomCheckRequestType,
+    currentArray: string[]
+  ) => {
+    if (!value.trim()) return
+    if (currentArray.includes(value.trim())) {
+      toast.warn('This item is already added')
+      return
+    }
+    setValue(fieldName, [...currentArray, value.trim()] as any)
+    setter('')
+  }
+
+  const removeTag = (
+    indexToRemove: number,
+    fieldName: keyof SymptomCheckRequestType,
+    currentArray: string[]
+  ) => {
+    setValue(fieldName, currentArray.filter((_, i) => i !== indexToRemove) as any)
+  }
 
   return (
-      <main className="min-h-screen bg-white pt-10 pb-10">
-        {/* Header */}
-        <section className="max-w-3xl mx-auto px-6 text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-600 text-sm font-semibold px-4 py-1.5 rounded-full mb-4"
-          >
-            <Bot size={14} /> AI Symptom Checker
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl font-extrabold text-gray-900"
-          >
-            What are you feeling?
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mt-3 text-gray-500 text-lg"
-          >
-            Select your symptoms and get AI-powered insights instantly.
-          </motion.p>
-        </section>
+    <div className="min-h-screen bg-blue-100 text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-3xl mx-auto backdrop-blur-sm bg-white/90 border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+          <Activity className="w-8 h-8 text-emerald-600 animate-pulse" />
+          <div>
+            <h1 className="text-2xl font-bold bg-linear-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+              AI Symptom Analyzer
+            </h1>
+            <p className="text-sm text-slate-500">Provide details below to get an intelligent health assessment.</p>
+          </div>
+        </div>
 
-        <div className="max-w-3xl mx-auto px-6 space-y-8">
-          {/* Common symptoms grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Common Symptoms</p>
-            <div className="flex flex-wrap gap-3">
-              {commonSymptoms.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => toggle(s)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                    selected.includes(s)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+          {/* Age and Gender Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                <User className="w-4 h-4 text-emerald-600" /> Age <span className="text-rose-600">*</span>
+              </label>
+              <input
+                type="number"
+                {...register('age', { required: 'Age is required', min: { value: 0, message: 'Invalid age' } })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. 25"
+              />
+              {errors.age && <p className="text-rose-600 text-xs mt-1">{errors.age.message}</p>}
             </div>
-          </motion.div>
 
-          {/* Custom symptom input */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex gap-3"
-          >
-            <input
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustom()}
-              placeholder="Add another symptom..."
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-            />
-            <button
-              onClick={addCustom}
-              className="px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors"
-            >
-              <Plus size={18} />
-            </button>
-          </motion.div>
-
-          {/* Selected symptoms */}
-          <AnimatePresence>
-            {selected.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-blue-50 border border-blue-100 rounded-2xl p-5"
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                <User className="w-4 h-4 text-emerald-600" /> Gender <span className="text-rose-600">*</span>
+              </label>
+              <select
+                {...register('gender', { required: 'Gender is required' })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors appearance-none"
               >
-                <p className="text-xs font-semibold text-blue-500 uppercase tracking-widest mb-3">
-                  Selected ({selected.length})
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {selected.map((s) => (
-                    <span
-                      key={s}
-                      className="inline-flex items-center gap-1.5 bg-white border border-blue-200 text-blue-700 text-sm font-medium px-3 py-1.5 rounded-lg"
-                    >
-                      {s}
-                      <button onClick={() => toggle(s)} className="hover:text-red-500 transition-colors">
-                        <X size={12} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <option value="male" className="bg-white">Male</option>
+                <option value="female" className="bg-white">Female</option>
+                <option value="other" className="bg-white">Other</option>
+              </select>
+            </div>
+          </div>
 
-          {/* CTA */}
+          {/* Dynamic Symptoms Section */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+              <Activity className="w-4 h-4 text-emerald-600" /> Symptoms <span className="text-rose-600">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentSymptom}
+                onChange={(e) => setCurrentSymptom(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag(currentSymptom, setCurrentSymptom, 'symptoms', watchedSymptoms)
+                  }
+                }}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Press Enter or click Add (e.g. Headache, Dry Cough)"
+              />
+              <button
+                type="button"
+                onClick={() => addTag(currentSymptom, setCurrentSymptom, 'symptoms', watchedSymptoms)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl flex items-center justify-center border border-slate-200 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Chips Container */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              <AnimatePresence>
+                {watchedSymptoms.map((symptom, index) => (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    key={`symptom-${index}`}
+                    className="flex items-center gap-1.5 bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-medium px-3 py-1.5 rounded-full"
+                  >
+                    {symptom}
+                    <button type="button" onClick={() => removeTag(index, 'symptoms', watchedSymptoms)}>
+                      <X className="w-3.5 h-3.5 hover:text-rose-600 transition-colors" />
+                    </button>
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Duration, Temperature, Blood Pressure Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                <Clock className="w-4 h-4 text-emerald-600" /> Duration
+              </label>
+              <input
+                type="text"
+                {...register('duration')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. 3 days, 1 week"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                <Thermometer className="w-4 h-4 text-emerald-600" /> Temp (°C)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                {...register('temperature')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. 37.5"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                <HeartPulse className="w-4 h-4 text-emerald-600" /> Blood Pressure
+              </label>
+              <input
+                type="text"
+                {...register('bloodPressure')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. 120/80"
+              />
+            </div>
+          </div>
+
+          {/* Existing Conditions Input */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+              <AlertCircle className="w-4 h-4 text-emerald-600" /> Existing Conditions
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentCondition}
+                onChange={(e) => setCurrentCondition(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag(currentCondition, setCurrentCondition, 'existingConditions', watchedConditions)
+                  }
+                }}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. Diabetes, Hypertension"
+              />
+              <button
+                type="button"
+                onClick={() => addTag(currentCondition, setCurrentCondition, 'existingConditions', watchedConditions)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl border border-slate-200 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <AnimatePresence>
+                {watchedConditions.map((cond, index) => (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    key={`condition-${index}`}
+                    className="flex items-center gap-1.5 bg-blue-100 border border-blue-200 text-blue-800 text-xs font-medium px-3 py-1.5 rounded-full"
+                  >
+                    {cond}
+                    <button type="button" onClick={() => removeTag(index, 'existingConditions', watchedConditions)}>
+                      <X className="w-3.5 h-3.5 hover:text-rose-600 transition-colors" />
+                    </button>
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Current Medications Input */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+              <Pill className="w-4 h-4 text-emerald-600" /> Current Medications
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentMed}
+                onChange={(e) => setCurrentMed(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag(currentMed, setCurrentMed, 'currentMedications', watchedMeds)
+                  }
+                }}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. Metformin, Aspirin"
+              />
+              <button
+                type="button"
+                onClick={() => addTag(currentMed, setCurrentMed, 'currentMedications', watchedMeds)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl border border-slate-200 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <AnimatePresence>
+                {watchedMeds.map((med, index) => (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    key={`med-${index}`}
+                    className="flex items-center gap-1.5 bg-purple-100 border border-purple-200 text-purple-800 text-xs font-medium px-3 py-1.5 rounded-full"
+                  >
+                    {med}
+                    <button type="button" onClick={() => removeTag(index, 'currentMedications', watchedMeds)}>
+                      <X className="w-3.5 h-3.5 hover:text-rose-600 transition-colors" />
+                    </button>
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Allergies Input */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+              <ShieldAlert className="w-4 h-4 text-emerald-600" /> Allergies
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentAllergy}
+                onChange={(e) => setCurrentAllergy(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag(currentAllergy, setCurrentAllergy, 'allergies', watchedAllergies)
+                  }
+                }}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. Penicillin, Peanuts"
+              />
+              <button
+                type="button"
+                onClick={() => addTag(currentAllergy, setCurrentAllergy, 'allergies', watchedAllergies)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl border border-slate-200 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <AnimatePresence>
+                {watchedAllergies.map((allergy, index) => (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    key={`allergy-${index}`}
+                    className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-800 text-xs font-medium px-3 py-1.5 rounded-full"
+                  >
+                    {allergy}
+                    <button type="button" onClick={() => removeTag(index, 'allergies', watchedAllergies)}>
+                      <X className="w-3.5 h-3.5 hover:text-rose-600 transition-colors" />
+                    </button>
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Additional Notes Area */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+              <FileText className="w-4 h-4 text-emerald-600" /> Additional Notes
+            </label>
+            <textarea
+              {...register('additionalNotes')}
+              rows={3}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+              placeholder="Any other details you would like to share..."
+            />
+          </div>
+
+          {/* Submit Button */}
           <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            onClick={handleCheck}
-            disabled={selected.length === 0 || loading}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-2xl transition-all shadow-lg shadow-blue-200"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            type="submit"
+            disabled={aiLoading}
+            className="w-full bg-linear-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-emerald-500/10 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                />
-                Analyzing...
-              </span>
-            ) : (
+            {aiLoading ? (
               <>
-                Check Symptoms <ArrowRight size={16} />
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Analyzing Symptoms...
               </>
+            ) : (
+              'Analyze with AI'
             )}
           </motion.button>
-
-          {/* Lite Result */}
-          <AnimatePresence>
-            {result && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="border border-blue-100 rounded-2xl overflow-hidden"
-              >
-                <div className="bg-white p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="font-bold text-gray-900">AI Result (Preview)</p>
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${urgencyColors[result.urgency]}`}>
-                      {result.urgency} Urgency
-                    </span>
-                  </div>
-                  <p className="text-gray-600 text-sm leading-relaxed">{result.summary}</p>
-                </div>
-
-                {/* Login gate */}
-                <div className="bg-blue-600 p-5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <Lock size={18} className="text-blue-200 shrink-0" />
-                    <div>
-                      <p className="text-white font-semibold text-sm">Full result requires login</p>
-                      <p className="text-blue-200 text-xs">See department recommendations, hospital matches & full AI analysis</p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/login"
-                    className="shrink-0 bg-white text-blue-600 font-semibold text-sm px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors"
-                  >
-                    Sign Up Free
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-  );
+        </form>
+      </motion.div>
+    </div>
+  )
 }
+
+export default Page

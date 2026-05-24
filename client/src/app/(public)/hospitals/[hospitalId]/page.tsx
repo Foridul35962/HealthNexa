@@ -184,7 +184,7 @@ const HospitalDetailsPage = () => {
                         </h2>
                         {/* Secondary Contextual Link Action at Head Panel */}
                         <Link
-                            href={`/doctors/search?hospital=${hospitalId}`}
+                            href={`/doctors?hospital=${hospitalId}`}
                             className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 group self-start sm:self-center"
                         >
                             Search all hospital registry
@@ -206,7 +206,7 @@ const HospitalDetailsPage = () => {
 
                                 {/* Department level custom filtering dynamic route */}
                                 <Link
-                                    href={`/doctors/search?hospital=${hospitalId}&department=${encodeURIComponent(dept.department)}`}
+                                    href={`/doctors?hospital=${hospitalId}&department=${encodeURIComponent(dept.department)}`}
                                     className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-0.5"
                                 >
                                     All {dept.department} Staff
