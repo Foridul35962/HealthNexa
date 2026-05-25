@@ -401,6 +401,23 @@ export const addAppointment = AsyncHandler(async (req, res) => {
 
     const qrImage = await QRCode.toDataURL(qrPayload);
 
+    await appointment.populate([
+        {
+            path: "doctorId",
+            select: "userId chamberNumber department",
+            populate: {
+                path: "userId",
+                select: "fullName image.url"
+            }
+        },
+        {
+            path: "hospitalId",
+            select: "name"
+        }
+    ])
+
+    appointment.qrHash = undefined
+
     await redis.del(`appointmentHistory:${patientId}:page:${1}`);
 
     return res.status(201).json(
@@ -513,7 +530,7 @@ export const getAppointmentById = AsyncHandler(async (req, res) => {
                     select: "userId chamberNumber department",
                     populate: {
                         path: "userId",
-                        select: "fullName"
+                        select: "fullName image.url"
                     }
                 },
                 {
@@ -542,7 +559,7 @@ export const getAppointmentById = AsyncHandler(async (req, res) => {
 
     let qrImage = null;
 
-    if (appointment.status === "Booked") {
+    if (appointment.status === "Booked" || appointment.status === "Pending") {
         const qrPayload =
             `${process.env.CORS_ORIGIN}/receptionist/check-in?appointmentId=${appointment._id}&hash=${appointment.qrHash}`;
 

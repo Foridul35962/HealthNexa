@@ -11,7 +11,7 @@ patientRoute.delete("/symptom/:symptomId", protect, isPatient, controller.delete
 patientRoute.post("/add-appointment", protect, isPatient, controller.addAppointment)
 patientRoute.get("/appointment-history", protect, isPatient, controller.getAppointmentHistory)
 patientRoute.get("/appointment/:appointmentId", protect, isPatient, controller.getAppointmentById)
-patientRoute.get("/doctor-token/:doctorId/:date", protect, isPatient, controller.getAppointmentById)
+patientRoute.get("/doctor-token/:doctorId/:date", protect, isPatient, controller.getCurrentToken)
 patientRoute.delete("/appointment/:appointmentId", protect, isPatient, controller.deleteAppointment)
 
 export default patientRoute
