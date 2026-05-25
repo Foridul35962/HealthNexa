@@ -1,5 +1,10 @@
 "use client"
+import { addAppointment } from '@/store/slice/patientSlice'
+import { AppDispatch } from '@/store/store'
+import { useRouter } from 'next/navigation'
 import React from 'react'
+import { useDispatch } from 'react-redux'
+import { toast } from 'react-toastify'
 
 interface Props {
     doctorId: string
@@ -21,9 +26,17 @@ const ConfirmAppointment = ({ doctorId, name, hospitalName, department, chamberN
         { label: 'Consultation Fee', value: `৳${consultationFee}` },
     ]
 
-    const handleAppointment = ()=>{
-        console.log("appointment for", doctorId)
-        onConfirm()
+    const dispatch = useDispatch<AppDispatch>()
+    const router = useRouter()
+
+    const handleAppointment = async ()=>{
+        try {
+            const res = await dispatch(addAppointment({doctorId})).unwrap()
+            onConfirm()
+            router.push(`/appointments/${res.data.appointment._id}`)
+        } catch (error:any) {
+            toast.error(error.message)
+        }
     }
 
     return (
