@@ -5,6 +5,7 @@ import hospitalAdminSlice from './slice/hospitalAdminSlice'
 import publicSlice from './slice/publicSlice'
 import pharmacySlice from './slice/pharmacySlice'
 import aiSlice from './slice/aiSlice'
+import patientSlice from './slice/patientSlice'
 
 const store = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
         public: publicSlice,
         pharmacy: pharmacySlice,
         ai: aiSlice,
+        patient: patientSlice,
     }
 })
 
