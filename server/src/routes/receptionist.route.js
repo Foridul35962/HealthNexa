@@ -6,7 +6,7 @@ import isReceptionist from '../middlewares/isReceptionist.js'
 const receptionistRoute = express.Router()
 
 receptionistRoute.post("/checkIn", protect, isReceptionist, controller.checkInPatient)
-receptionistRoute.post("/recallPatient", protect, isReceptionist, controller.recallSkippedPatient)
+receptionistRoute.patch("/recallPatient", protect, isReceptionist, controller.recallSkippedPatient)
 receptionistRoute.get("/dashboard", protect, isReceptionist, controller.dashboard)
 
 export default receptionistRoute

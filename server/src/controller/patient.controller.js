@@ -538,7 +538,6 @@ export const getAppointmentById = AsyncHandler(async (req, res) => {
                     select: "name"
                 }
             ])
-            .select("-qrHash")
             .lean();
 
         if (!appointment) {

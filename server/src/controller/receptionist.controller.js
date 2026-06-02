@@ -194,7 +194,6 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
 
     await updateDashboardCache(user.hospitalId, {
         skipped: -1,
-        checkedIn: +1
     });
 
     // Clear Cache
