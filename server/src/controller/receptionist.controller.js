@@ -103,6 +103,7 @@ export const checkInPatient = AsyncHandler(async (req, res) => {
 
     // Clear Cache
     await redis.del(redisKey);
+    await redis.del(`dashboard:doctor:${appointment.doctorId}`)
 
     return res
         .status(200)
@@ -198,6 +199,7 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
 
     // Clear Cache
     await redis.del(redisKey);
+    await redis.del(`dashboard:doctor:${appointment.doctorId}`)
 
     return res
         .status(200)
