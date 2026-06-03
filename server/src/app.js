@@ -10,6 +10,7 @@ import pharmacyRouter from './routes/pharmacy.route.js'
 import aiRouter from './routes/ai.route.js'
 import patientRoute from './routes/patient.route.js'
 import receptionistRoute from './routes/receptionist.route.js'
+import doctorRoute from './routes/doctor.route.js'
 
 const app = express()
 
@@ -31,6 +32,7 @@ app.use('/api/pharmacy', pharmacyRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/patient', patientRoute)
 app.use('/api/receptionist', receptionistRoute)
+app.use('/api/doctor', doctorRoute)
 
 app.get('/', (req, res) => {
     res.send("HealthNexa server is running ...")
