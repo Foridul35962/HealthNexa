@@ -36,9 +36,9 @@ export const patientNextCall = createAsyncThunk(
 
 export const completeAppointment = createAsyncThunk(
     "doctor/completeAppointment",
-    async ({ appointmentId }: { appointmentId: string }, { rejectWithValue }) => {
+    async (data: { appointmentId: string }, { rejectWithValue }) => {
         try {
-            const res = await axios.patch(`${SERVER_URL}/appointment-complete`, appointmentId,
+            const res = await axios.patch(`${SERVER_URL}/appointment-complete`, data,
                 { withCredentials: true }
             )
             return res.data

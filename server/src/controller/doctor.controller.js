@@ -255,15 +255,24 @@ export const callNextPatient = AsyncHandler(async (req, res) => {
 
 export const completeAppointment = AsyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
+    const userId = req.user._id
 
     if (!appointmentId || !mongoose.isValidObjectId(appointmentId)) {
         throw new ApiErrors(400, "invalid appointment id")
     }
 
-    const appointment = await Appointments.findById(appointmentId);
+    const appointment = await Appointments.findById(appointmentId)
+        .populate({
+            path: "doctorId",
+            select: "userId"
+        });
 
     if (!appointment) {
         throw new ApiErrors(404, "Appointment not found");
+    }
+
+    if (appointment.doctorId.userId.toString() !== userId.toString()) {
+        throw new ApiErrors(403, "You are not authorized for this appointment");
     }
 
     if (appointment.status !== "Pending") {
@@ -323,11 +332,11 @@ const moveToNextPatient = async (req, doctorId) => {
     if (queue.length === 0) {
         await setCurrentToken(doctorId, 0);
 
-        io.to(`queue:${doctorId}:${date}`).emit("queue:update", {
-            currentToken: 0,
-            currentAppointment: null,
-            nextPatients: []
-        });
+        // io.to(`queue:${doctorId}:${date}`).emit("queue:update", {
+        //     currentToken: 0,
+        //     currentAppointment: null,
+        //     nextPatients: []
+        // });
 
         return {
             currentAppointment: null,
@@ -340,8 +349,8 @@ const moveToNextPatient = async (req, doctorId) => {
     const next = queue[1] || null;
 
     // HANDLE SKIP LOGIC
-        current.isSkipped = true;
-        await current.save();
+    current.isSkipped = true;
+    await current.save();
 
     // ONLY ONE PATIENT LEFT
     if (!next) {
