@@ -87,6 +87,16 @@ const doctorSlice = createSlice({
             })
             .addCase(patientNextCall.fulfilled, (state, action) => {
                 state.nextCallLoading = false
+                const data = action.payload.data
+                if (state.doctorDashboard) {
+                    if (data.currentAppointment) {
+                        state.doctorDashboard.queue.currentToken = data.currentAppointment.tokenNumber
+                        state.doctorDashboard.queue.currentAppointment = data.currentAppointment
+                    } else {
+                        state.doctorDashboard.queue.currentAppointment = null
+                    }
+                    state.doctorDashboard.queue.nextPatients = data.nextPatients
+                }
             })
             .addCase(patientNextCall.rejected, (state) => {
                 state.nextCallLoading = false
@@ -98,6 +108,18 @@ const doctorSlice = createSlice({
             })
             .addCase(completeAppointment.fulfilled, (state, action) => {
                 state.completeLoading = false
+                if (state.doctorDashboard) {
+                    state.doctorDashboard.stats.income += state.doctorDashboard?.queue.consultationFee
+                    state.doctorDashboard.stats.completed+=1
+                    state.doctorDashboard.stats.waiting-=1
+                    if (action.payload.data.currentAppointment) {
+                        state.doctorDashboard.queue.currentToken = action.payload.data.currentAppointment.tokenNumber
+                        state.doctorDashboard.queue.currentAppointment = action.payload.data.currentAppointment
+                    }else{
+                        state.doctorDashboard.queue.currentAppointment = null
+                    }
+                    state.doctorDashboard.queue.nextPatients = action.payload.data.nextPatients
+                }
             })
             .addCase(completeAppointment.rejected, (state) => {
                 state.completeLoading = false

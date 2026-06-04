@@ -1,6 +1,6 @@
 "use client"
 
-import { completeAppointment, getDoctorDashboard } from '@/store/slice/doctorSlice'
+import { completeAppointment, getDoctorDashboard, patientNextCall } from '@/store/slice/doctorSlice'
 import { AppDispatch, RootState } from '@/store/store'
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -60,10 +60,11 @@ const Page = () => {
     }, [dispatch, doctorDashboard])
 
     // --- Button Handler Functions ---
-    const handleSkipPatient = async (appointmentId: string | undefined) => {
+    const handleSkipPatient = async (patientName:string | undefined, appointmentId: string | undefined) => {
         if (!appointmentId) return
         try {
-            toast.info(`Skipping patient with appointment ID: ${appointmentId}`)
+            await dispatch(patientNextCall(null)).unwrap()
+            toast.info(`Skipping patient: ${patientName}`)
         } catch (error: any) {
             toast.error(error.message || "Failed to skip patient")
         }
@@ -198,7 +199,7 @@ const Page = () => {
                                             Current Consultation
                                         </h2>
                                         <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
-                                            Token Live: #{queue.currentToken} of {queue.lastToken}
+                                            Token Live: #{queue.currentToken}
                                         </span>
                                     </div>
 
@@ -217,15 +218,11 @@ const Page = () => {
                                                     </div>
                                                     <div className="space-y-1">
                                                         <h3 className="text-xl font-bold text-slate-900">
-                                                            {queue.currentAppointment.patientId?.fullName}
+                                                            {queue.currentAppointment.patient?.fullName}
                                                         </h3>
-                                                        <p className="text-sm text-slate-500 font-medium">{queue.currentAppointment.patientId?.email}</p>
-                                                        <p className="text-sm text-slate-500 font-medium">{queue.currentAppointment.patientId?.phoneNumber}</p>
+                                                        <p className="text-sm text-slate-500 font-medium">{queue.currentAppointment.patient?.email}</p>
+                                                        <p className="text-sm text-slate-500 font-medium">{queue.currentAppointment.patient?.phoneNumber}</p>
                                                     </div>
-                                                </div>
-                                                <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-                                                    <Calendar className="h-3.5 w-3.5" />
-                                                    Slot: {queue.currentAppointment.slotStart} - {queue.currentAppointment.slotEnd}
                                                 </div>
                                             </motion.div>
                                         ) : (
@@ -243,17 +240,17 @@ const Page = () => {
                                 {/* OPERATIONAL CONTROLS */}
                                 <div className="mt-8 grid grid-cols-2 gap-4 border-t border-slate-100 pt-5">
                                     <button
-                                        onClick={() => handleSkipPatient(queue.currentAppointment?._id)}
+                                        onClick={() => handleSkipPatient(queue.currentAppointment?.patient.fullName, queue.currentAppointment?._id)}
                                         disabled={!queue.currentAppointment || nextCallLoading}
-                                        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                                        className="flex items-center cursor-pointer justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         {nextCallLoading && <Loader2 className="h-4 w-4 animate-spin text-slate-500" />}
                                         Skip Patient
                                     </button>
                                     <button
-                                        onClick={() => handleCompleteAppointment(queue.currentAppointment?.patientId.fullName, queue.currentAppointment?._id)}
+                                        onClick={() => handleCompleteAppointment(queue.currentAppointment?.patient.fullName, queue.currentAppointment?._id)}
                                         disabled={!queue.currentAppointment || completeLoading}
-                                        className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                                        className="flex items-center cursor-pointer justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         {completeLoading && <Loader2 className="h-4 w-4 animate-spin text-white" />}
                                         Complete Appointment

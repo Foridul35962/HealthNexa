@@ -11,7 +11,6 @@ export type DoctorDashboardType = {
     queue: {
         consultationFee: number;
         currentToken: number;
-        lastToken: number;
         currentAppointment: CurrentAppointment | null;
         nextPatients: NextPatient[];
     };
@@ -20,7 +19,7 @@ export type DoctorDashboardType = {
 export type CurrentAppointment = {
     _id: string;
 
-    patientId: {
+    patient: {
         _id: string;
         fullName: string;
         email: string;
@@ -28,9 +27,6 @@ export type CurrentAppointment = {
     };
 
     tokenNumber: number;
-    status: "Booked" | "Cancelled" | "Pending" | "Done";
-    slotStart: string;
-    slotEnd: string;
 };
 
 export type NextPatient = {

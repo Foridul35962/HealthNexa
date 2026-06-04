@@ -18,6 +18,8 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
 
     if (cachedDoctor) {
         doctor = JSON.parse(cachedDoctor);
+        doctor._id = new mongoose.Types.ObjectId(doctor._id);
+        doctor.hospitalId = new mongoose.Types.ObjectId(doctor.hospitalId);
     } else {
         doctor = await Doctors.findOne({ userId }).lean();
 
@@ -138,18 +140,16 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
             path: "patientId",
             select: "fullName email phoneNumber"
         })
-        .select("_id tokenNumber status slotStart slotEnd patientId")
+        .select("_id tokenNumber patientId")
         .sort({ tokenNumber: 1 })
+        .limit(6)
         .lean();
 
     const currentAppointment = queueData.length
         ? {
             _id: queueData[0]._id,
-            patientId: queueData[0].patientId,
+            patient: queueData[0].patientId,
             tokenNumber: queueData[0].tokenNumber,
-            status: queueData[0].status,
-            slotStart: queueData[0].slotStart,
-            slotEnd: queueData[0].slotEnd
         }
         : null;
 
@@ -158,10 +158,6 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
             ? queueData[0].tokenNumber
             : 0;
 
-    const lastToken =
-        queueData.length > 0
-            ? queueData[queueData.length - 1].tokenNumber
-            : 0;
 
     await setCurrentToken(doctor._id, currentToken);
 
@@ -191,7 +187,6 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
         queue: {
             consultationFee: doctor.consultationFee,
             currentToken,
-            lastToken,
             currentAppointment,
             nextPatients
         }
@@ -240,7 +235,7 @@ export const callNextPatient = AsyncHandler(async (req, res) => {
         );
     }
 
-    const result = await moveToNextPatient(req, doctor._id);
+    const result = await moveToNextPatient(doctor._id, true);
 
     // Redis invalidate
     await redis.del(`dashboard:doctor:${doctor._id}`);
@@ -283,9 +278,9 @@ export const completeAppointment = AsyncHandler(async (req, res) => {
     appointment.isSkipped = false;
     await appointment.save();
 
-    const result = await moveToNextPatient(req, appointment.doctorId);
+    const result = await moveToNextPatient(appointment.doctorId._id, false);
 
-    await redis.del(`dashboard:doctor:${appointment.doctorId}`);
+    await redis.del(`dashboard:doctor:${appointment.doctorId._id}`);
     await redis.del(`appointment:${appointmentId}`);
 
     // const io = req.app.get("io");
@@ -306,8 +301,7 @@ export const completeAppointment = AsyncHandler(async (req, res) => {
     );
 });
 
-const moveToNextPatient = async (req, doctorId) => {
-    // const io = req.app.get("io");
+const moveToNextPatient = async (doctorId, shouldSkipCurrent = false) => {
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -315,72 +309,164 @@ const moveToNextPatient = async (req, doctorId) => {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const date = new Date().toISOString().split("T")[0];
-
     const queue = await Appointments.find({
         doctorId,
         date: { $gte: todayStart, $lte: todayEnd },
-        status: { $in: ["Pending", "Skipped"] }
+        status: "Pending",
+        isSkipped: { $ne: true }
     })
         .populate({
             path: "patientId",
             select: "fullName email phoneNumber"
         })
-        .sort({ tokenNumber: 1 });
+        .sort({ tokenNumber: 1 })
+        .limit(7)
 
-    // NO PATIENT
-    if (queue.length === 0) {
-        await setCurrentToken(doctorId, 0);
-
-        // io.to(`queue:${doctorId}:${date}`).emit("queue:update", {
-        //     currentToken: 0,
-        //     currentAppointment: null,
-        //     nextPatients: []
-        // });
-
+    // ❌ NO PATIENT
+    if (queue.length < 1) {
         return {
             currentAppointment: null,
             skippedToken: null,
-            nextToken: null
-        };
-    }
-
-    const current = queue[0];
-    const next = queue[1] || null;
-
-    // HANDLE SKIP LOGIC
-    current.isSkipped = true;
-    await current.save();
-
-    // ONLY ONE PATIENT LEFT
-    if (!next) {
-        await setCurrentToken(doctorId, current.tokenNumber);
-
-        // io.to(`queue:${doctorId}:${date}`).emit("queue:update", {
-        //     currentToken: current.tokenNumber,
-        //     currentAppointment: current
-        // });
-
-        return {
-            skippedToken: current.tokenNumber,
             nextToken: null,
-            currentAppointment: current
+            nextPatients: []
         };
     }
 
-    // MOVE NEXT
-    await setCurrentToken(doctorId, next.tokenNumber);
 
-    // io.to(`queue:${doctorId}:${date}`).emit("queue:update", {
-    //     currentToken: next.tokenNumber,
-    //     currentAppointment: next
-    // });
+    // ✅ SKIP logic only for callNextPatient
+    let remainingQueue
+    if (shouldSkipCurrent) {
+        queue[0].isSkipped = true;
+        await queue[0].save();
 
-    return {
-        skippedToken: current.tokenNumber,
-        nextToken: next.tokenNumber,
-        currentAppointment: next
-    };
+        remainingQueue = queue.slice(1);
+
+        if (remainingQueue.length === 0) {
+            return {
+                currentAppointment: null,
+                skippedToken: queue[0].tokenNumber,
+                nextToken: null,
+                nextPatients: []
+            };
+        } else if (remainingQueue.length === 1) {
+            const current = remainingQueue[0]
+
+            await setCurrentToken(doctorId, current.tokenNumber);
+
+            return {
+                currentAppointment: {
+                    _id: current._id,
+                    tokenNumber: current.tokenNumber,
+                    patient: {
+                        _id: current.patientId._id,
+                        fullName: current.patientId.fullName,
+                        email: current.patientId.email,
+                        phoneNumber: current.patientId.phoneNumber
+                    }
+                },
+
+                skippedToken: queue[0].tokenNumber,
+                nextToken: null,
+                nextPatients: []
+            };
+        } else {
+            const current = remainingQueue[0]
+
+            await setCurrentToken(doctorId, current.tokenNumber);
+            const nextPatients = remainingQueue.slice(1, 6).map(item => ({
+                appointmentId: item._id,
+                tokenNumber: item.tokenNumber,
+                patient: {
+                    _id: item.patientId._id,
+                    fullName: item.patientId.fullName,
+                    email: item.patientId.email,
+                    phoneNumber: item.patientId.phoneNumber
+                }
+            }));
+
+            return {
+                skippedToken: queue[0].tokenNumber,
+
+                nextToken: nextPatients[0].tokenNumber,
+
+                currentAppointment: {
+                    _id: current._id,
+                    tokenNumber: current.tokenNumber,
+                    patient: {
+                        _id: current.patientId._id,
+                        fullName: current.patientId.fullName,
+                        email: current.patientId.email,
+                        phoneNumber: current.patientId.phoneNumber
+                    }
+                },
+
+                nextPatients
+            };
+        }
+    } else {
+        if (queue.length === 0) {
+            return {
+                currentAppointment: null,
+                skippedToken: null,
+                nextToken: null,
+                nextPatients: []
+            };
+        } else if (queue.length === 1) {
+            const current = queue[0]
+
+            await setCurrentToken(doctorId, current.tokenNumber);
+
+            return {
+                currentAppointment: {
+                    _id: current._id,
+                    tokenNumber: current.tokenNumber,
+                    patient: {
+                        _id: current.patientId._id,
+                        fullName: current.patientId.fullName,
+                        email: current.patientId.email,
+                        phoneNumber: current.patientId.phoneNumber
+                    }
+                },
+
+                skippedToken: null,
+                nextToken: null,
+                nextPatients: []
+            };
+        } else {
+            const current = queue[0]
+
+            await setCurrentToken(doctorId, current.tokenNumber);
+            const nextPatients = queue.slice(1, 6).map(item => ({
+                appointmentId: item._id,
+                tokenNumber: item.tokenNumber,
+                patient: {
+                    _id: item.patientId._id,
+                    fullName: item.patientId.fullName,
+                    email: item.patientId.email,
+                    phoneNumber: item.patientId.phoneNumber
+                }
+            }));
+
+            return {
+                skippedToken: null,
+
+                nextToken: nextPatients[0].tokenNumber,
+
+                currentAppointment: {
+                    _id: current._id,
+                    tokenNumber: current.tokenNumber,
+                    patient: {
+                        _id: current.patientId._id,
+                        fullName: current.patientId.fullName,
+                        email: current.patientId.email,
+                        phoneNumber: current.patientId.phoneNumber
+                    }
+                },
+
+                nextPatients
+            };
+        }
+    }
 };
 
 const setCurrentToken = async (doctorId, token) => {
