@@ -1,5 +1,5 @@
 import { userType } from "@/Types/authTypes";
-import { HosAdminAllDoctorType, HosAdminEditDoctorType, HospitalType } from "@/Types/hospitalAdminTypes";
+import { HosAdminAllDoctorType, HosAdminDashboardType, HosAdminEditDoctorType, HospitalType } from "@/Types/hospitalAdminTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -140,6 +140,21 @@ export const getHospital = createAsyncThunk(
     }
 )
 
+export const getHospitalAdminDashboard = createAsyncThunk(
+    "hospitalAdmin/dashboard",
+    async (_: null, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/dashboard`, {
+                withCredentials: true
+            })
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     hosAdminLoading: boolean
     allReceptionist: userType[]
@@ -148,6 +163,8 @@ interface initialStateType {
     adminHospital: HospitalType | null
     fetchLoading: boolean
     deleteLoading: boolean
+    hosAdminDashboard: HosAdminDashboardType
+    isHosAdminDashboardFetch: boolean
 }
 
 const initialState: initialStateType = {
@@ -157,7 +174,21 @@ const initialState: initialStateType = {
     editDoctors: null,
     adminHospital: null,
     fetchLoading: false,
-    deleteLoading: false
+    deleteLoading: false,
+    hosAdminDashboard: {
+        appointments: {
+            total: 0,
+            checkedIn: 0,
+            completed: 0,
+            pending: 0,
+        },
+        employees: {
+            doctors: 0,
+            receptionists: 0,
+            total: 0
+        }
+    },
+    isHosAdminDashboardFetch: false
 }
 
 const hospitalAdminSlice = createSlice({
@@ -279,6 +310,20 @@ const hospitalAdminSlice = createSlice({
         builder
             .addCase(getHospital.fulfilled, (state, action) => {
                 state.adminHospital = action.payload.data
+            })
+        // get dashboard
+        builder
+            .addCase(getHospitalAdminDashboard.pending, (state) => {
+                state.hosAdminLoading = true
+            })
+            .addCase(getHospitalAdminDashboard.fulfilled, (state, action) => {
+                state.hosAdminLoading = false
+                state.isHosAdminDashboardFetch = true
+                state.hosAdminDashboard = action.payload.data
+            })
+            .addCase(getHospitalAdminDashboard.rejected, (state) => {
+                state.hosAdminLoading = false
+                state.isHosAdminDashboardFetch = true
             })
     }
 })

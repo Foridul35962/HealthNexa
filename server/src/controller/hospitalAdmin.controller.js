@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import Hospitals from "../models/Hospitals.model.js";
 import Doctors from "../models/Doctors.model.js";
 import redis from "../config/redis.js";
+import Appointments from "../models/Appointments.model.js";
 
 export const addReceptionist = [
     check('fullName')
@@ -799,3 +800,137 @@ export const getHospital = AsyncHandler(async (req, res) => {
             new ApiResponse(200, hospital, "hospital fetch successfully")
         )
 })
+
+export const dashboard = AsyncHandler(async (req, res) => {
+    const user = req.user;
+
+    const key = `dashboard:hospitalAdmin:${user.hospitalId}`;
+
+    const cached = await redis.get(key);
+
+    if (cached) {
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                JSON.parse(cached),
+                "Dashboard from cache"
+            )
+        );
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [appointmentStats, employeeStats] = await Promise.all([
+        Appointments.aggregate([
+            {
+                $match: {
+                    hospitalId: user.hospitalId,
+                    date: {
+                        $gte: startOfDay,
+                        $lte: endOfDay
+                    }
+                }
+            },
+            {
+                $facet: {
+                    total: [
+                        { $count: "count" }
+                    ],
+                    checkedIn: [
+                        {
+                            $match: {
+                                checkedIn: true
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    pending: [
+                        {
+                            $match: {
+                                status: "Booked"
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    completed: [
+                        {
+                            $match: {
+                                status: "Done"
+                            }
+                        },
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ]),
+
+        Users.aggregate([
+            {
+                $match: {
+                    hospitalId: user.hospitalId,
+                    role: "hospitalStaff"
+                }
+            },
+            {
+                $facet: {
+                    totalEmployees: [
+                        { $count: "count" }
+                    ],
+                    doctors: [
+                        {
+                            $match: {
+                                staffRole: "doctor"
+                            }
+                        },
+                        { $count: "count" }
+                    ],
+                    receptionists: [
+                        {
+                            $match: {
+                                staffRole: "receptionist"
+                            }
+                        },
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ])
+    ]);
+
+    const appointmentData = appointmentStats[0];
+    const employeeData = employeeStats[0];
+
+    const response = {
+        appointments: {
+            total: appointmentData.total[0]?.count || 0,
+            checkedIn: appointmentData.checkedIn[0]?.count || 0,
+            pending: appointmentData.pending[0]?.count || 0,
+            completed: appointmentData.completed[0]?.count || 0
+        },
+
+        employees: {
+            total: employeeData.totalEmployees[0]?.count || 0,
+            doctors: employeeData.doctors[0]?.count || 0,
+            receptionists: employeeData.receptionists[0]?.count || 0
+        }
+    };
+
+    await redis.set(
+        key,
+        JSON.stringify(response),
+        "EX",
+        300
+    );
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            response,
+            "Dashboard fetched successfully"
+        )
+    );
+});

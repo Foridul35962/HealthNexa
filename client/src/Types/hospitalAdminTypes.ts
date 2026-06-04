@@ -6,7 +6,7 @@ export type HosAdminAllDoctorType = {
     email: string;
     fullName: string;
     role: string;
-    image?:{
+    image?: {
       url?: string
     }
     phoneNumber?: string;
@@ -68,7 +68,7 @@ export type HosAdminEditDoctorType = {
     email: string;
     fullName: string;
     role: string;
-    image?:{
+    image?: {
       url?: string
     }
     phoneNumber?: string;
@@ -93,3 +93,17 @@ export type HosAdminEditDoctorType = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+export interface HosAdminDashboardType {
+  appointments: {
+    total: number;
+    checkedIn: number;
+    pending: number;
+    completed: number;
+  };
+  employees: {
+    total: number;
+    doctors: number;
+    receptionists: number;
+  };
+}
