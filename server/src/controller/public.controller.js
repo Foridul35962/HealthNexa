@@ -750,7 +750,7 @@ export const getDoctorById = AsyncHandler(async (req, res) => {
         throw new ApiErrors(400, "invalid doctorId")
     }
 
-    const redisKey = `doctor:${doctorId}`
+    const redisKey = `doctorId:${doctorId}`
     let doctor
 
     const redisDoctor = await redis.get(redisKey)
