@@ -1,4 +1,4 @@
-import { AppointmentHistoryType, AppointmentResponseType } from "@/Types/patientTypes";
+import { AppointmentHistoryType, AppointmentResponseType, UpcomingAppointmentType } from "@/Types/patientTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 
@@ -21,12 +21,12 @@ export const addAppointment = createAsyncThunk(
 
 export const getAppointmentHistory = createAsyncThunk(
     "patient/appointmentHistory",
-    async ({page}:{page:number}, { rejectWithValue }) => {
+    async ({ page }: { page: number }, { rejectWithValue }) => {
         try {
             const res = await axios.get(`${SERVER_URL}/appointment-history`,
                 {
                     withCredentials: true,
-                    params:{page}
+                    params: { page }
                 }
             )
             return res.data
@@ -82,12 +82,44 @@ export const deleteAppointment = createAsyncThunk(
     }
 )
 
+export const getUpcommingAppointment = createAsyncThunk(
+    "patient/upcommingAppointment",
+    async (_: null, { rejectWithValue }) => {
+        try {
+            const res = await axios.get(`${SERVER_URL}/upcomming-appointment`, {
+                withCredentials: true
+            })
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
+export const updatePatientDetails = createAsyncThunk(
+    "patient/updatePatient",
+    async (data: FormData, { rejectWithValue }) => {
+        try {
+            const res = await axios.patch(`${SERVER_URL}/update-patient`, data,
+                { withCredentials: true }
+            )
+            return res.data
+        } catch (error) {
+            const err = error as AxiosError<any>
+            return rejectWithValue(err?.response?.data || "Something went wrong")
+        }
+    }
+)
+
 interface initialStateType {
     patientLoading: boolean
     patientDeleteLoading: boolean
     appointment: AppointmentResponseType | null
-    appointmentHistory: AppointmentHistoryType,
+    appointmentHistory: AppointmentHistoryType
     currentToken: number
+    upcommingAppointment: UpcomingAppointmentType[]
+    updateLoading: boolean
 }
 
 const initialState: initialStateType = {
@@ -103,7 +135,9 @@ const initialState: initialStateType = {
         },
         data: []
     },
-    currentToken: 0
+    currentToken: 0,
+    upcommingAppointment: [],
+    updateLoading: false
 }
 
 const patientSlice = createSlice({
@@ -175,6 +209,30 @@ const patientSlice = createSlice({
             })
             .addCase(deleteAppointment.rejected, (state) => {
                 state.patientDeleteLoading = false
+            })
+
+        //upcomming appointment
+        builder
+            .addCase(getUpcommingAppointment.pending, (state) => {
+                state.patientLoading = true
+            })
+            .addCase(getUpcommingAppointment.fulfilled, (state, action) => {
+                state.patientLoading = false
+                state.upcommingAppointment = action.payload.data
+            })
+            .addCase(getUpcommingAppointment.rejected, (state) => {
+                state.patientLoading = false
+            })
+        //update details
+        builder
+            .addCase(updatePatientDetails.pending, (state) => {
+                state.updateLoading = true
+            })
+            .addCase(updatePatientDetails.fulfilled, (state) => {
+                state.updateLoading = false
+            })
+            .addCase(updatePatientDetails.rejected, (state) => {
+                state.updateLoading = false
             })
     }
 })

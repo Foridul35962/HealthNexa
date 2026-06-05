@@ -81,3 +81,26 @@ export interface Pagination {
   limit: number;
   totalPages: number;
 }
+
+export interface UpcomingAppointmentType {
+  _id: string;
+  doctorId?: {
+    _id: string;
+    userId?: {
+      _id: string;
+      fullName: string;
+      image?: {
+        url: string;
+      };
+    };
+    department?: string;
+  };
+  hospitalId?: {
+    _id: string;
+    name: string;
+  };
+  date: string;
+  slotStart: string;
+  slotEnd: string;
+  status: string;
+}
