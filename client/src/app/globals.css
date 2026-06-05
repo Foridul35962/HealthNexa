@@ -6,11 +6,45 @@
 }
 
 .scrollbar-none {
-  -ms-overflow-style: none;   /* IE / Edge */
-  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;
+  /* IE / Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-none::-webkit-scrollbar {
-  display: none;              /* Chrome / Safari */
+  display: none;
+  /* Chrome / Safari */
+}
+
+@layer utilities {
+
+  /* Webkit browsers (Chrome, Safari, Edge) er jonno */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0px !important;
+  }
+
+  /* Firefox, IE ebong Edge er jonno */
+  .no-scrollbar {
+    -ms-overflow-style: none !important;
+    /* IE and Edge */
+    scrollbar-width: none !important;
+    /* Firefox */
+  }
+}
+
+/* Pura web-application er body theke scrollbar remove korar jonno */
+html,
+body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
 }
 
 @theme inline {

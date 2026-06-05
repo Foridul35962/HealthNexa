@@ -24,7 +24,7 @@ import {
   Building,
   Activity,
   Calendar,
-  CalendarDays,
+  Tablets,
 } from 'lucide-react'
 import { AppDispatch, RootState } from '@/store/store'
 import { logout } from '@/store/slice/authSlice'
@@ -42,23 +42,24 @@ type Role = 'admin' | 'pharmacyOwner' | 'hospitalStaff' | 'patient'
 
 // ── static nav configs ────────────────────────────────────────────────────────
 const NAV_ADMIN: NavItem[] = [
-  { label: 'Dashboard',        href: '/admin',                               icon: LayoutDashboard },
-  { label: 'Hospital Requests',href: '/admin/registration-request/hospital', icon: Building2       },
-  { label: 'Pharmacy Requests',href: '/admin/registration-request/pharmacy', icon: ShoppingBag     },
-  { label: 'Medicine Requests',href: '/admin/registration-request/medicine', icon: FlaskConical    },
+  { label: 'Dashboard',         href: '/admin',                                                              icon: LayoutDashboard },
+  { label: 'Hospital Requests', href: '/admin/registration-request/hospital',                                icon: Building2       },
+  { label: 'Pharmacy Requests', href: '/admin/registration-request/pharmacy',                                icon: ShoppingBag     },
+  { label: 'Medicine Requests', href: '/admin/registration-request/medicine',                                icon: FlaskConical    },
 ]
 
 const NAV_PHARMACY: NavItem[] = [
-  { label: 'Dashboard',    href: '/pharmacy',            icon: LayoutDashboard },
-  { label: 'Edit Pharmacy',href: '/pharmacy/edit',       icon: Pencil          },
-  { label: 'Add Medicine', href: '/medicine/add',        icon: PlusCircle      },
-  { label: 'New Request',  href: '/medicine/new-request',icon: ClipboardList   },
+  { label: 'Dashboard',    href: '/pharmacy',             icon: LayoutDashboard },
+  { label: 'Edit Pharmacy',href: '/pharmacy/edit',        icon: Pencil          },
+  { label: 'All Medicine', href: '/pharmacy/medicine',     icon: Tablets         },
+  { label: 'Add Medicine',  href: '/pharmacy/medicine/add', icon: PlusCircle      },
+  { label: 'New Request',  href: '/pharmacy/medicine/new-request', icon: ClipboardList },
 ]
 
 const NAV_PATIENT: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Appointments', href: '/appointment', icon: Calendar },
-  { label: 'Symptoms', href: '/symptoms', icon: Stethoscope },
+  { label: 'Dashboard',    href: '/dashboard',    icon: LayoutDashboard },
+  { label: 'Appointments', href: '/appointments', icon: Calendar },
+  { label: 'Symptoms',     href: '/symptoms',     icon: Stethoscope },
 ]
 
 // hospital staff links — needs hospitalId so built at runtime
@@ -80,14 +81,14 @@ const buildStaffLinks = (staffRole: StaffRole, hospitalId?: string): NavItem[] =
       ]
     case 'receptionist':
       return [
-        { label: 'Dashboard', href: '/receptionist',           icon: LayoutDashboard },
+        { label: 'Dashboard', href: '/receptionist',          icon: LayoutDashboard },
         { label: 'Check-in',  href: '/receptionist/check-in',  icon: UserCheck       },
         { label: 'Recall',    href: '/receptionist/recall',    icon: ClipboardList   },
         hospitalLink,
       ]
     case 'doctor':
       return [
-        { label: 'Dashboard',   href: '/doctor', icon: LayoutDashboard },
+        { label: 'Dashboard', href: '/doctor', icon: LayoutDashboard },
         hospitalLink,
       ]
     default:
@@ -158,7 +159,7 @@ const LogoutModal = ({
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={onConfirm}
-          className="flex-1 py-2.5 rounded-xl bg-red-500 text-sm font-semibold text-white hover:bg-red-600 transition-colors shadow shadow-red-200"
+          className="flex-1 py-2.5 cursor-pointer rounded-xl bg-red-500 text-sm font-semibold text-white hover:bg-red-600 transition-colors shadow shadow-red-200"
         >
           Yes, Logout
         </motion.button>
@@ -194,8 +195,18 @@ const SidebarContent = ({
   isMobile: boolean
 }) => {
   const pathname = usePathname()
-  const isActive = (href: string) =>
-    href ? (pathname === href || pathname.startsWith(href + '/')) : false
+  
+  // FIXED: Specific match for routing so multiple backgrounds don't light up together
+  const isActive = (href: string) => {
+    if (!href) return false
+    if (href === '/pharmacy/medicine') {
+      return pathname === href
+    }
+    if (href === '/hospital-admin' || href === '/admin' || href === '/pharmacy' || href === '/dashboard' || href === '/receptionist' || href === '/doctor') {
+      return pathname === href
+    }
+    return pathname === href || pathname.startsWith(href + '/')
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -290,7 +301,7 @@ const SidebarContent = ({
       <div className={`px-3 pb-4 pt-2 border-t border-blue-50 shrink-0 ${collapsed && !isMobile ? 'flex justify-center' : ''}`}>
         <button
           onClick={onLogout}
-          className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-colors duration-150 w-full ${
+          className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-red-500 hover:bg-red-100 bg-red-50 hover:text-red-600 transition-colors duration-150 w-full ${
             collapsed && !isMobile ? 'justify-center w-auto' : ''
           }`}
         >

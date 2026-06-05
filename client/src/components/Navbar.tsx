@@ -90,9 +90,9 @@ export default function Navbar() {
       return (
         <Link
           href="/login"
-          className="text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors px-4"
+          className="text-sm font-bold bg-blue-100 text-blue-600 border border-blue-100 transition-all duration-300 hover:bg-blue-600 hover:text-white px-5 py-2 rounded-xl active:scale-[0.98] shadow-sm shadow-blue-50/50"
         >
-          Login
+          Sign In
         </Link>
       );
     }
@@ -111,7 +111,7 @@ export default function Navbar() {
           onClick={() => setDropOpen(!dropOpen)}
           className="flex items-center gap-2 focus:outline-none group"
         >
-          <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-blue-200 group-hover:border-blue-500 transition-colors shadow-sm shrink-0">
+          <div className="w-9 h-9 rounded-xl cursor-pointer overflow-hidden border-2 border-blue-200 group-hover:border-blue-500 transition-colors shadow-sm shrink-0">
             {user.image?.url ? (
               <img
                 src={user.image.url}
@@ -119,7 +119,7 @@ export default function Navbar() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-full h-full bg-blue-600 cursor-pointer flex items-center justify-center text-white text-xs font-bold">
                 {initials}
               </div>
             )}
@@ -146,7 +146,7 @@ export default function Navbar() {
               <Link
                 href={dashboardHref}
                 onClick={() => setDropOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-100 bg-blue-50 hover:text-blue-700 transition-colors"
               >
                 <LayoutDashboard size={15} className="text-blue-500" />
                 Go to Dashboard
@@ -164,8 +164,8 @@ export default function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4 }}
       className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 w-full ${scrolled
-          ? "bg-white/90 backdrop-blur-md shadow-sm border-b border-blue-50"
-          : "bg-blue-50/80 backdrop-blur-md border-b border-transparent"
+        ? "bg-white/90 backdrop-blur-md shadow-sm border-b border-blue-50"
+        : "bg-blue-50/80 backdrop-blur-md border-b border-transparent"
         }`}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between">
@@ -263,7 +263,7 @@ export default function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between py-4 px-4 rounded-xl text-slate-700 font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-slate-50 last:border-none"
+                    className="flex items-center justify-between py-4 px-4 rounded-xl text-slate-700 font-bold hover:bg-blue-100 bg-blue-50 hover:text-blue-600 transition-colors border-b border-slate-50 last:border-none"
                   >
                     {link.label}
                     <ChevronRight size={18} className="text-gray-400" />
@@ -288,9 +288,9 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setMenuOpen(false)}
-                    className="text-center py-3.5 rounded-xl border-2 border-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors"
+                    className="text-center py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-100 hover:border-slate-300 active:scale-[0.98] transition-all shadow-sm"
                   >
-                    Login
+                    Sign In
                   </Link>
                 )}
                 <Link
