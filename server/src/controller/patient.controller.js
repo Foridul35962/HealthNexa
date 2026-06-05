@@ -8,6 +8,9 @@ import Doctors from "../models/Doctors.model.js";
 import Appointments from "../models/Appointments.model.js";
 import crypto from "crypto";
 import QRCode from "qrcode";
+import cloudinary from "../config/cloudinary.js";
+import uploadToCloudinary from "../utils/uploadToCloudinary.js";
+import Users from "../models/Users.model.js";
 
 
 export const getAllAISymptom = AsyncHandler(async (req, res) => {
@@ -419,6 +422,7 @@ export const addAppointment = AsyncHandler(async (req, res) => {
     appointment.qrHash = undefined
 
     await redis.del(`appointmentHistory:${patientId}:page:${1}`);
+    await redis.del(`upcommingAppointment:${patientId}`)
 
     return res.status(201).json(
         new ApiResponse(
@@ -638,3 +642,104 @@ export const deleteAppointment = AsyncHandler(async (req, res) => {
             new ApiResponse(200, appointmentId, "appointment delete successfully")
         )
 })
+
+export const upCommingAppointment = AsyncHandler(async (req, res) => {
+    const user = req.user
+
+    const redisKey = `upcommingAppointment:${user._id}`
+    const redisAppointment = await redis.get(redisKey)
+    if (redisAppointment) {
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, JSON.parse(redisAppointment), "upcomming appointment fetch successfully")
+            )
+    }
+
+    const appointment = await Appointments.find({
+        patientId: user._id,
+        status: { $in: ["Booked", "Pending"] }
+    })
+        .select("-patientId -qrHash -tokenNumber -isSkipped -checkedIn")
+        .populate([
+            {
+                path: "hospitalId",
+                select: "name"
+            },
+            {
+                path: "doctorId",
+                select: "userId department",
+                populate: {
+                    path: "userId",
+                    select: "fullName image.url"
+                }
+            },
+        ])
+        .sort({ date: -1 })
+        .lean()
+
+    await redis.set(redisKey,
+        JSON.stringify(appointment),
+        "EX", 300
+    )
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, appointment, "up comming appointment fetch successfull")
+        )
+})
+
+export const editPatientDetails = AsyncHandler(async (req, res) => {
+    const user = req.user;
+    const { fullName } = req.body;
+    const image = req.files?.[0];
+
+    if (!fullName && !image) {
+        throw new ApiErrors(400, "Nothing to update");
+    }
+
+    const userUpdates = {};
+
+    if (fullName) {
+        userUpdates.fullName = fullName;
+    }
+
+    if (image) {
+        if (!image.mimetype.startsWith("image/")) {
+            throw new ApiErrors(400, "Only image files are allowed");
+        }
+
+        const uploaded = await uploadToCloudinary(
+            image.buffer,
+            "HealthNexa"
+        );
+
+        if (user?.image?.publicId) {
+            await cloudinary.uploader.destroy(
+                user.image.publicId
+            );
+        }
+
+        userUpdates.image = {
+            url: uploaded.secure_url,
+            publicId: uploaded.public_id,
+        };
+    }
+
+    const updatedUser = await Users.findByIdAndUpdate(
+        user._id,
+        userUpdates,
+        { new: true }
+    ).select("-password -image.publicId");
+
+    await redis.del(`userId:${user._id}`);
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            updatedUser,
+            "Patient updated successfully"
+        )
+    );
+});

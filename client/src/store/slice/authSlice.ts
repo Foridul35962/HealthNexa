@@ -1,12 +1,13 @@
 import { emailType, loginType, otpType, RegistrationHospitalType, RegistrationPharmacyType, registrationType, resendOtpType, userType } from "@/Types/authTypes";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
+import { updatePatientDetails } from "./patientSlice";
 
 const SERVER_URL = `${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth`
 
 export const registrationPatiend = createAsyncThunk(
     "authRegi",
-    async(data:registrationType, {rejectWithValue})=>{
+    async (data: registrationType, { rejectWithValue }) => {
         try {
             const res = await axios.post(`${SERVER_URL}/patient-registration`, data)
             return res.data
@@ -34,7 +35,7 @@ export const verifyRegi = createAsyncThunk(
 
 export const registrationHospital = createAsyncThunk(
     "auth/regi-hospital",
-    async(data:RegistrationHospitalType, {rejectWithValue})=>{
+    async (data: RegistrationHospitalType, { rejectWithValue }) => {
         try {
             const res = await axios.post(`${SERVER_URL}/hospital-registration`, data)
             return res.data
@@ -47,7 +48,7 @@ export const registrationHospital = createAsyncThunk(
 
 export const verifyHospital = createAsyncThunk(
     "auth/verify-hospital",
-    async(data:otpType, {rejectWithValue})=>{
+    async (data: otpType, { rejectWithValue }) => {
         try {
             const res = await axios.post(`${SERVER_URL}/verify-hospital`, data)
             return res.data
@@ -60,7 +61,7 @@ export const verifyHospital = createAsyncThunk(
 
 export const registrationPharmacy = createAsyncThunk(
     "auth/regi-pharmacy",
-    async(data:RegistrationPharmacyType, {rejectWithValue})=>{
+    async (data: RegistrationPharmacyType, { rejectWithValue }) => {
         try {
             const res = await axios.post(`${SERVER_URL}/pharmacy-registration`, data)
             return res.data
@@ -73,7 +74,7 @@ export const registrationPharmacy = createAsyncThunk(
 
 export const verifyPharmacy = createAsyncThunk(
     "auth/verify-pharmacy",
-    async(data:otpType, {rejectWithValue})=>{
+    async (data: otpType, { rejectWithValue }) => {
         try {
             const res = await axios.post(`${SERVER_URL}/verify-pharmacy`, data)
             return res.data
@@ -274,7 +275,7 @@ const authSlice = createSlice({
             .addCase(verifyPharmacy.rejected, (state) => {
                 state.authLoading = false
             })
-        
+
         //login
         builder
             .addCase(login.pending, (state) => {
@@ -354,6 +355,11 @@ const authSlice = createSlice({
             })
             .addCase(getUser.rejected, (state) => {
                 state.fetchLoading = true
+            })
+        //update user
+        builder
+            .addCase(updatePatientDetails.fulfilled, (state, action) => {
+                state.user = action.payload.data
             })
     }
 })
