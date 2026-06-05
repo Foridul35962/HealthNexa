@@ -6,11 +6,13 @@ import MentalHealthSection from "@/components/home/MentalHealthSection";
 import CommunityAlertsSection from "@/components/home/CommunityAlertsSection";
 import B2BSection from "@/components/home/B2BSection";
 import TrustSection from "@/components/home/TrustSection";
+import Navbar from "@/components/Navbar";
 
 export default function HomePage() {
   return (
     <>
       <main>
+        <Navbar />
         <HeroSection />
         <FeaturesSection />
         <HowItWorksSection />

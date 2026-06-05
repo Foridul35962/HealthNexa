@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Phone, MapPin, Navigation, Siren } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 const hotlines = [
   { label: "National Emergency", number: "999", color: "text-red-600 bg-red-50 border-red-200" },
@@ -29,6 +30,8 @@ export default function EmergencyPage() {
   };
 
   return (
+    <>
+    <Navbar/>
     <main className="min-h-screen bg-white pb-20">
       {/* Hero */}
       <section className="bg-red-600 py-14">
@@ -154,5 +157,6 @@ export default function EmergencyPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }
