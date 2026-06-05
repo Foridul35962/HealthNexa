@@ -648,7 +648,7 @@ export const editDoctor = [
                 }
 
                 const user = await Users.findById(doctor.userId)
-                if (user && user.image.publicId) {
+                if (user && user.image?.publicId) {
                     await cloudinary.uploader.destroy(user.image.publicId)
                 }
 
