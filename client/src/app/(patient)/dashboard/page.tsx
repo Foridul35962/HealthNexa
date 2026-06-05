@@ -398,10 +398,10 @@ const Page = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={patientLoading}
+                    disabled={updateLoading}
                     className="px-4 py-2 rounded-xl cursor-pointer disabled:cursor-wait disabled:bg-blue-400 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
                   >
-                    {patientLoading ? 'Saving...' : 'Save Changes'}
+                    {updateLoading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
