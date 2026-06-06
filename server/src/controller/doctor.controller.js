@@ -199,6 +199,12 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
         300
     );
 
+    const date = new Date().toISOString().split('T')[0];
+
+    const io = req.app.get("io")
+    io.to(`queue:${doctor._id}:${date}`)
+        .emit("updateTokenNumber", { currentToken })
+
     return res.status(200).json(
         new ApiResponse(
             200,
@@ -209,43 +215,54 @@ export const doctorDashboard = AsyncHandler(async (req, res) => {
 });
 
 export const callNextPatient = AsyncHandler(async (req, res) => {
-    const userId = req.user._id;
+    try {
+        const userId = req.user._id;
 
-    // Doctor Cache
-    const doctorCacheKey = `doctor:${userId}`;
+        // Doctor Cache
+        const doctorCacheKey = `doctor:${userId}`;
 
-    let doctor;
+        let doctor;
 
-    const cachedDoctor = await redis.get(doctorCacheKey);
+        const cachedDoctor = await redis.get(doctorCacheKey);
 
-    if (cachedDoctor) {
-        doctor = JSON.parse(cachedDoctor);
-    } else {
-        doctor = await Doctors.findOne({ userId }).lean();
+        if (cachedDoctor) {
+            doctor = JSON.parse(cachedDoctor);
+        } else {
+            doctor = await Doctors.findOne({ userId }).lean();
 
-        if (!doctor) {
-            throw new ApiErrors(404, "Doctor not found");
+            if (!doctor) {
+                throw new ApiErrors(404, "Doctor not found");
+            }
+
+            await redis.set(
+                doctorCacheKey,
+                JSON.stringify(doctor),
+                "EX",
+                300
+            );
         }
 
-        await redis.set(
-            doctorCacheKey,
-            JSON.stringify(doctor),
-            "EX",
-            300
+        const result = await moveToNextPatient(req, doctor._id, true);
+
+        // Redis invalidate
+        await redis.del(`dashboard:doctor:${doctor._id}`);
+
+        //real time token update
+        if (result.currentAppointment?.tokenNumber) {
+            const date = new Date().toISOString().split('T')[0];
+            const currentToken = result.currentAppointment.tokenNumber
+
+            const io = req.app.get("io")
+            io.to(`queue:${doctor._id}:${date}`)
+                .emit("updateTokenNumber", { currentToken })
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, result, "Next patient called")
         );
+    } catch (error) {
+        console.log(error)
     }
-
-    const result = await moveToNextPatient(doctor._id, true);
-
-    // Redis invalidate
-    await redis.del(`dashboard:doctor:${doctor._id}`);
-
-    // realtime dashboard refresh
-    // req.app.get("io").to(`doctor:${doctor._id}`).emit("dashboard:refresh");
-
-    return res.status(200).json(
-        new ApiResponse(200, result, "Next patient called")
-    );
 });
 
 export const completeAppointment = AsyncHandler(async (req, res) => {
@@ -278,19 +295,26 @@ export const completeAppointment = AsyncHandler(async (req, res) => {
     appointment.isSkipped = false;
     await appointment.save();
 
-    const result = await moveToNextPatient(appointment.doctorId._id, false);
+    const result = await moveToNextPatient(req, appointment.doctorId._id, false);
 
     await redis.del(`dashboard:doctor:${appointment.doctorId._id}`);
     await redis.del(`appointment:${appointmentId}`);
 
-    // const io = req.app.get("io");
+    const io = req.app.get("io");
 
-    // io.to(`user:${appointment.patientId}`).emit(
-    //     "appointmentStatusUpdate",
-    //     { status: "Done" }
-    // );
+    io.to(`user:${appointment.patientId}`).emit(
+        "appointmentStatusUpdate",
+        { status: "Done" }
+    );
 
-    // io.to(`doctor:${appointment.doctorId}`).emit("dashboard:refresh");
+    if (result.currentAppointment?.tokenNumber) {
+        const date = new Date().toISOString().split('T')[0];
+        const currentToken = result.currentAppointment.tokenNumber
+
+        const io = req.app.get("io")
+        io.to(`queue:${appointment.doctorId._id}:${date}`)
+            .emit("updateTokenNumber", { currentToken })
+    }
 
     return res.status(200).json(
         new ApiResponse(
@@ -301,7 +325,7 @@ export const completeAppointment = AsyncHandler(async (req, res) => {
     );
 });
 
-const moveToNextPatient = async (doctorId, shouldSkipCurrent = false) => {
+const moveToNextPatient = async (req, doctorId, shouldSkipCurrent = false) => {
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -322,7 +346,7 @@ const moveToNextPatient = async (doctorId, shouldSkipCurrent = false) => {
         .sort({ tokenNumber: 1 })
         .limit(7)
 
-    // ❌ NO PATIENT
+    //  NO PATIENT
     if (queue.length < 1) {
         return {
             currentAppointment: null,
@@ -333,11 +357,15 @@ const moveToNextPatient = async (doctorId, shouldSkipCurrent = false) => {
     }
 
 
-    // ✅ SKIP logic only for callNextPatient
+    // SKIP logic only for callNextPatient
     let remainingQueue
     if (shouldSkipCurrent) {
         queue[0].isSkipped = true;
         await queue[0].save();
+
+        const io = req.app.get("io")
+        io.to(`user:${queue[0].patientId._id}`)
+            .emit("recallPatient", { isSkipped: true })
 
         remainingQueue = queue.slice(1);
 

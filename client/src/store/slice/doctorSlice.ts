@@ -66,7 +66,17 @@ const initialState: initialStateType = {
 const doctorSlice = createSlice({
     name: "doctor",
     initialState,
-    reducers: {},
+    reducers: {
+        recallPatient: (state, action) => {
+            if (state.doctorDashboard) {
+                if (state.doctorDashboard.queue.nextPatients) {
+                    state.doctorDashboard.queue.nextPatients = [action.payload, ...state.doctorDashboard.queue.nextPatients]
+                } else {
+                    state.doctorDashboard.queue.nextPatients = action.payload
+                }
+            }
+        }
+    },
     extraReducers: (builder) => {
         //doctor dashboard
         builder
@@ -110,12 +120,12 @@ const doctorSlice = createSlice({
                 state.completeLoading = false
                 if (state.doctorDashboard) {
                     state.doctorDashboard.stats.income += state.doctorDashboard?.queue.consultationFee
-                    state.doctorDashboard.stats.completed+=1
-                    state.doctorDashboard.stats.waiting-=1
+                    state.doctorDashboard.stats.completed += 1
+                    state.doctorDashboard.stats.waiting -= 1
                     if (action.payload.data.currentAppointment) {
                         state.doctorDashboard.queue.currentToken = action.payload.data.currentAppointment.tokenNumber
                         state.doctorDashboard.queue.currentAppointment = action.payload.data.currentAppointment
-                    }else{
+                    } else {
                         state.doctorDashboard.queue.currentAppointment = null
                     }
                     state.doctorDashboard.queue.nextPatients = action.payload.data.nextPatients
@@ -127,4 +137,5 @@ const doctorSlice = createSlice({
     }
 })
 
+export const { recallPatient } = doctorSlice.actions
 export default doctorSlice.reducer

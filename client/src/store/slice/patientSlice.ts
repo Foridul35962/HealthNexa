@@ -143,7 +143,27 @@ const initialState: initialStateType = {
 const patientSlice = createSlice({
     name: "patient",
     initialState,
-    reducers: {},
+    reducers: {
+        updateStatus: (state, action) => {
+            if (state.appointment) {
+                state.appointment.appointment.status = action.payload.status
+                if (action.payload.tokenNumber !== undefined) {
+                    state.appointment.appointment.tokenNumber = action.payload.tokenNumber
+                }
+                if (action.payload.checkedIn !== undefined) {
+                    state.appointment.appointment.checkedIn = action.payload.checkedIn
+                }
+            }
+        },
+        updateCurrentToken: (state, action) => {
+            state.currentToken = action.payload.currentToken
+        },
+        updateRecall: (state, action) => {
+            if (state.appointment) {
+                state.appointment.appointment.isSkipped = action.payload
+            }
+        }
+    },
     extraReducers: (builder) => {
         //add appointment
         builder
@@ -237,4 +257,5 @@ const patientSlice = createSlice({
     }
 })
 
+export const { updateStatus, updateCurrentToken, updateRecall } = patientSlice.actions
 export default patientSlice.reducer

@@ -1,22 +1,24 @@
 "use client"
 
-import { completeAppointment, getDoctorDashboard, patientNextCall } from '@/store/slice/doctorSlice'
+import { completeAppointment, getDoctorDashboard, patientNextCall, recallPatient } from '@/store/slice/doctorSlice'
 import { AppDispatch, RootState } from '@/store/store'
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { motion, AnimatePresence, Variants } from 'framer-motion'
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  UserMinus, 
-  DollarSign, 
-  User, 
-  ArrowRight,
-  Loader2,
-  Calendar
+import {
+    CheckCircle2,
+    XCircle,
+    Clock,
+    UserMinus,
+    DollarSign,
+    User,
+    ArrowRight,
+    Loader2,
+    Calendar
 } from 'lucide-react'
+import { NextPatient } from '@/Types/doctorTypes'
+import socket from '@/socket'
 
 // --- Strictly Typed Framer Motion Variants to Fix TS Errors ---
 const containerVariants: Variants = {
@@ -31,14 +33,14 @@ const containerVariants: Variants = {
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 15 },
-    show: { 
-        opacity: 1, 
-        y: 0, 
-        transition: { 
-            type: "spring", 
-            stiffness: 100, 
-            damping: 15 
-        } 
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 100,
+            damping: 15
+        }
     }
 }
 
@@ -59,8 +61,18 @@ const Page = () => {
         }
     }, [dispatch, doctorDashboard])
 
+    useEffect(() => {
+        const handleRecallPatient = (data: NextPatient) => {
+            dispatch(recallPatient(data))
+        }
+        socket.on("recallPatientDoctor", handleRecallPatient)
+        return () => {
+            socket.off("recallPatientDoctor", handleRecallPatient)
+        }
+    }, [dispatch])
+
     // --- Button Handler Functions ---
-    const handleSkipPatient = async (patientName:string | undefined, appointmentId: string | undefined) => {
+    const handleSkipPatient = async (patientName: string | undefined, appointmentId: string | undefined) => {
         if (!appointmentId) return
         try {
             await dispatch(patientNextCall(null)).unwrap()
@@ -70,10 +82,10 @@ const Page = () => {
         }
     }
 
-    const handleCompleteAppointment = async (patientName:string | undefined, appointmentId: string | undefined) => {
+    const handleCompleteAppointment = async (patientName: string | undefined, appointmentId: string | undefined) => {
         if (!appointmentId) return
         try {
-            await dispatch(completeAppointment({appointmentId:appointmentId as string})).unwrap()
+            await dispatch(completeAppointment({ appointmentId: appointmentId as string })).unwrap()
             toast.success(`Completing appointment: ${patientName}`)
         } catch (error: any) {
             toast.error(error.message || "Failed to complete appointment")
@@ -87,7 +99,7 @@ const Page = () => {
     return (
         <div className="min-h-screen bg-slate-50/60 p-4 md:p-8 font-sans text-slate-800">
             <div className="mx-auto max-w-7xl space-y-8">
-                
+
                 {/* --- HEADER SECTION --- */}
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -97,7 +109,7 @@ const Page = () => {
                     {doctorFetchLoading && !doctorDashboard ? (
                         <div className="h-9 w-40 animate-pulse rounded-lg bg-slate-200" />
                     ) : (
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             className="mt-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 sm:mt-0 shadow-sm border border-blue-100"
@@ -147,9 +159,9 @@ const Page = () => {
                         </div>
                     </div>
                 ) : (
-                    
+
                     /* --- 2. ACTUAL CONTENT (LOADED STATE) --- */
-                    <motion.div 
+                    <motion.div
                         variants={containerVariants}
                         initial="hidden"
                         animate="show"
@@ -165,30 +177,29 @@ const Page = () => {
                                 { title: "Absent", value: stats.notArrived, icon: UserMinus, color: "text-slate-400", bg: "bg-white" },
                                 { title: "Income", value: `৳${stats.income}`, icon: DollarSign, color: "text-blue-600", bg: "bg-gradient-to-br from-blue-50 to-white" }
                             ].map((card, idx) => (
-                                <motion.div 
+                                <motion.div
                                     variants={itemVariants}
-                                    key={idx} 
+                                    key={idx}
                                     className={`rounded-xl border border-slate-100 p-4 shadow-sm ${card.bg}`}
                                 >
                                     <div className="flex items-center justify-between text-slate-400">
                                         <span className="text-xs font-medium uppercase tracking-wider">{card.title}</span>
                                         <card.icon className={`h-4 w-4 ${card.color}`} />
                                     </div>
-                                    <p className={`mt-2 text-2xl font-bold ${
-                                        card.title === 'Completed' ? 'text-emerald-600' : 
-                                        card.title === 'Waiting' ? 'text-amber-600' : 
-                                        card.title === 'Cancelled' ? 'text-rose-600' : 
-                                        card.title === 'Income' ? 'text-blue-700' : 'text-slate-900'
-                                    }`}>{card.value}</p>
+                                    <p className={`mt-2 text-2xl font-bold ${card.title === 'Completed' ? 'text-emerald-600' :
+                                            card.title === 'Waiting' ? 'text-amber-600' :
+                                                card.title === 'Cancelled' ? 'text-rose-600' :
+                                                    card.title === 'Income' ? 'text-blue-700' : 'text-slate-900'
+                                        }`}>{card.value}</p>
                                 </motion.div>
                             ))}
                         </div>
 
                         {/* LIVE CONTROLS & QUEUE */}
                         <div className="grid gap-6 lg:grid-cols-3">
-                            
+
                             {/* ACTIVE CONSULTATION PANEL */}
-                            <motion.div 
+                            <motion.div
                                 variants={itemVariants}
                                 className="lg:col-span-2 flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden"
                             >
@@ -205,7 +216,7 @@ const Page = () => {
 
                                     <AnimatePresence mode="wait">
                                         {queue.currentAppointment ? (
-                                            <motion.div 
+                                            <motion.div
                                                 key={queue.currentAppointment._id}
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
@@ -226,7 +237,7 @@ const Page = () => {
                                                 </div>
                                             </motion.div>
                                         ) : (
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 className="flex h-48 items-center justify-center text-center"
@@ -259,18 +270,18 @@ const Page = () => {
                             </motion.div>
 
                             {/* UPCOMING QUEUE PANEL */}
-                            <motion.div 
+                            <motion.div
                                 variants={itemVariants}
                                 className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col"
                             >
                                 <h2 className="border-b border-slate-100 pb-4 text-lg font-bold text-slate-900">Next in Queue</h2>
-                                
+
                                 <div className="mt-4 max-h-80 overflow-y-auto space-y-3 pr-1 flex-1">
                                     <AnimatePresence>
                                         {queue.nextPatients && queue.nextPatients.length > 0 ? (
                                             queue.nextPatients.map((item, index) => (
-                                                <motion.div 
-                                                    key={item.appointmentId} 
+                                                <motion.div
+                                                    key={item.appointmentId}
                                                     initial={{ opacity: 0, x: 20 }}
                                                     animate={{ opacity: 1, x: 0, transition: { delay: index * 0.05 } }}
                                                     exit={{ opacity: 0, x: -20 }}

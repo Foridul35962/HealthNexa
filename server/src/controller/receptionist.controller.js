@@ -26,7 +26,22 @@ export const checkInPatient = AsyncHandler(async (req, res) => {
     if (redisAppointment) {
         appointment = JSON.parse(redisAppointment);
     } else {
-        appointment = await Appointments.findById(appointmentId).lean();
+        appointment = await Appointments.findById(appointmentId)
+            .populate([
+                {
+                    path: "doctorId",
+                    select: "userId chamberNumber department",
+                    populate: {
+                        path: "userId",
+                        select: "fullName image.url"
+                    }
+                },
+                {
+                    path: "hospitalId",
+                    select: "name"
+                }
+            ])
+            .lean();
 
         if (!appointment) {
             throw new ApiErrors(404, "Appointment not found");
@@ -39,7 +54,7 @@ export const checkInPatient = AsyncHandler(async (req, res) => {
     }
 
     // Hospital Validation
-    if (appointment.hospitalId.toString() !== user.hospitalId.toString()) {
+    if (appointment.hospitalId._id.toString() !== user.hospitalId.toString()) {
         throw new ApiErrors(401, "Appointment belongs to another hospital");
     }
 
@@ -58,7 +73,7 @@ export const checkInPatient = AsyncHandler(async (req, res) => {
 
     // Generate Next Token
     const lastAppointment = await Appointments.findOne({
-        doctorId: appointment.doctorId,
+        doctorId: new mongoose.Types.ObjectId(appointment.doctorId._id),
         date: appointmentDate,
         checkedIn: true
     })
@@ -105,6 +120,14 @@ export const checkInPatient = AsyncHandler(async (req, res) => {
     await redis.del(redisKey);
     await redis.del(`dashboard:doctor:${appointment.doctorId}`)
 
+    const io = req.app.get("io")
+    io.to(`user:${appointment.patientId}`)
+        .emit("appointmentStatusUpdate", {
+            status: "Pending",
+            tokenNumber: nextToken,
+            checkedIn: true
+        })
+
     return res
         .status(200)
         .json(
@@ -135,7 +158,22 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
     if (redisAppointment) {
         appointment = JSON.parse(redisAppointment);
     } else {
-        appointment = await Appointments.findById(appointmentId).lean();
+        appointment = await Appointments.findById(appointmentId)
+            .populate([
+                {
+                    path: "doctorId",
+                    select: "userId chamberNumber department",
+                    populate: {
+                        path: "userId",
+                        select: "fullName image.url"
+                    }
+                },
+                {
+                    path: "hospitalId",
+                    select: "name"
+                }
+            ])
+            .lean();
 
         if (!appointment) {
             throw new ApiErrors(404, "Appointment not found");
@@ -148,7 +186,7 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
     }
 
     // Hospital Validation
-    if (appointment.hospitalId.toString() !== user.hospitalId.toString()) {
+    if (appointment.hospitalId._id.toString() !== user.hospitalId.toString()) {
         throw new ApiErrors(401, "Appointment belongs to another hospital");
     }
 
@@ -184,7 +222,19 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
         {
             new: true
         }
-    );
+    ).populate([
+        {
+            path: "doctorId",
+            populate: {
+                path: "userId",
+                select: "_id"
+            }
+        },
+        {
+            path: "patientId",
+            select: "fullName _id email phoneNumber"
+        }
+    ])
 
     if (!updatedAppointment) {
         throw new ApiErrors(
@@ -193,6 +243,8 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
         );
     }
 
+    const doctorUserId = updatedAppointment?.doctorId?.userId?._id;
+
     await updateDashboardCache(user.hospitalId, {
         skipped: -1,
     });
@@ -200,6 +252,25 @@ export const recallSkippedPatient = AsyncHandler(async (req, res) => {
     // Clear Cache
     await redis.del(redisKey);
     await redis.del(`dashboard:doctor:${appointment.doctorId}`)
+
+    const io = req.app.get("io");
+
+    io.to(`user:${doctorUserId}`).emit("recallPatientDoctor", {
+        appointmentId,
+        tokenNumber: updatedAppointment.tokenNumber,
+
+        patient: {
+            _id: updatedAppointment.patientId?._id,
+            fullName: updatedAppointment.patientId?.fullName,
+            email: updatedAppointment.patientId?.email,
+            phoneNumber: updatedAppointment.patientId?.phoneNumber
+        }
+    });
+
+    io.to(`user:${updatedAppointment.patientId._id}`)
+        .emit("recallPatient", {
+            isSkipped: false
+        })
 
     return res
         .status(200)
