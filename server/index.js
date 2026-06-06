@@ -5,6 +5,7 @@ import connectDB from './src/config/db.js'
 import { startServer } from './src/config/redis.js'
 import http from 'http'
 import { Server } from 'socket.io'
+import { socketHandler } from './src/config/socket.js'
 
 
 const PORT = process.env.PORT || 5000

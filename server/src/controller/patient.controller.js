@@ -591,7 +591,7 @@ export const getCurrentToken = AsyncHandler(async (req, res) => {
         d.getMonth() + 1
     ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-    const redisKey = `queue:${doctorId}:${formattedDate}`;
+    const redisKey = `queue:token:${doctorId}:${formattedDate}`;
 
     const currentToken = await redis.get(redisKey) || "0";
 
