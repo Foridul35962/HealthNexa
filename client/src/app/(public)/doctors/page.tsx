@@ -2,14 +2,14 @@
 
 import { getHospitalNames, getDoctors, setLocation } from '@/store/slice/publicSlice'
 import { AppDispatch, RootState } from '@/store/store'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'react-toastify'
 import Link from 'next/link'
 import { DoctorItem, DoctorsResponseData, hospitalNameType } from '@/Types/publicTypes'
 
-const DoctorSearchPage = () => {
+const DoctorSearchContent = () => {
     const dispatch = useDispatch<AppDispatch>()
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -80,7 +80,6 @@ const DoctorSearchPage = () => {
             return
         }
 
-        // waste api call reduce
         const selectedHospital = hospitalNames?.find(h => h._id === filters.hospital)
         if (selectedHospital && hospitalInput === selectedHospital.name) {
             return
@@ -173,9 +172,7 @@ const DoctorSearchPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50/50 antialiased selection:bg-blue-500 selection:text-white">
-            
             <div className="relative overflow-hidden bg-slate-900 pb-20 pt-16">
-                {/* background */}
                 <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
                 <div className="absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
                 
@@ -194,8 +191,6 @@ const DoctorSearchPage = () => {
 
                     <form onSubmit={handleSearchSubmit} className="mt-10 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl backdrop-blur-xl ring-1 ring-white/10">
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-
-                            {/* doctor name input */}
                             <div>
                                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">Doctor Name</label>
                                 <div className="relative">
@@ -210,7 +205,6 @@ const DoctorSearchPage = () => {
                                 </div>
                             </div>
 
-                            {/* hospital suggesion */}
                             <div className="relative" ref={suggestionRef}>
                                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">Hospital Name</label>
                                 <div className="relative">
@@ -235,7 +229,6 @@ const DoctorSearchPage = () => {
                                     )}
                                 </div>
 
-                                {/* suggestion box */}
                                 {showSuggestions && hospitalNames && hospitalNames.length > 0 && (
                                     <div className="absolute left-0 right-0 z-50 mt-2 max-h-60 overflow-y-auto rounded-xl border border-slate-800 bg-slate-900 p-1.5 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl">
                                         {hospitalNames.map((hosp) => (
@@ -255,7 +248,6 @@ const DoctorSearchPage = () => {
                                 )}
                             </div>
 
-                            {/* department */}
                             <div>
                                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">Department</label>
                                 <select
@@ -284,8 +276,6 @@ const DoctorSearchPage = () => {
             </div>
 
             <div className="mx-auto -mt-12 max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
-                
-                {/* global loading */}
                 {(isLocating || fetchLoading) && !doctorslist && (
                     <div className="mb-8 flex items-center justify-center gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm font-medium text-blue-800 shadow-sm backdrop-blur">
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
@@ -346,7 +336,6 @@ const DoctorSearchPage = () => {
                                         </div>
                                     </div>
 
-                                    {/* information block */}
                                     <div className="mt-6 space-y-2.5 border-t border-slate-50 pt-4 text-sm text-slate-600">
                                         <div className="flex items-center gap-2">
                                             <span className="text-base text-slate-400">🏥</span>
@@ -414,4 +403,19 @@ const DoctorSearchPage = () => {
     )
 }
 
+
+const DoctorSearchPage = () => {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+            </div>
+        }>
+            <DoctorSearchContent />
+        </Suspense>
+    )
+}
+
 export default DoctorSearchPage
+
+export const dynamic = 'force-dynamic'
