@@ -283,7 +283,7 @@ docker compose down
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/HealthNexa.git
+git clone https://github.com/Foridul35962/HealthNexa.git
 cd HealthNexa
 ```
 
