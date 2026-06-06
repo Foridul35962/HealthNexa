@@ -262,12 +262,12 @@ export const addHospital = AsyncHandler(async (req, res) => {
         throw new ApiErrors(400, "invalid hospital id")
     }
 
-    // const session = await mongoose.startSession()
-    // session.startTransaction()
+    const session = await mongoose.startSession()
+    session.startTransaction()
 
     try {
         const reqHospital = await RequestHospitals.findById(hospitalId)
-        // .session(session)
+        .session(session)
 
         if (!reqHospital) {
             throw new ApiErrors(404, "hospital is not found in request")
@@ -280,7 +280,7 @@ export const addHospital = AsyncHandler(async (req, res) => {
             specialties: reqHospital.specialties,
             location: reqHospital.location
         }]
-            // , { session }
+            , { session }
         )
 
         if (!hospital || hospital.length === 0) {
@@ -296,7 +296,7 @@ export const addHospital = AsyncHandler(async (req, res) => {
             staffRole: "hospitalAdmin",
             hospitalId: hospital[0]._id
         }]
-            // , { session }
+            , { session }
         )
 
         if (!user || user.length === 0) {
@@ -312,11 +312,11 @@ export const addHospital = AsyncHandler(async (req, res) => {
         }
 
         await reqHospital.deleteOne(
-            // { session }
+            { session }
         )
 
-        // await session.commitTransaction()
-        // session.endSession()
+        await session.commitTransaction()
+        session.endSession()
 
         await redis.del(`hospitalReq:${hospitalId}`)
         await redis.del("Request:hospital")
@@ -328,8 +328,8 @@ export const addHospital = AsyncHandler(async (req, res) => {
             )
 
     } catch (error) {
-        // await session.abortTransaction()
-        // session.endSession()
+        await session.abortTransaction()
+        session.endSession()
         throw error
     }
 })
@@ -344,12 +344,12 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
         throw new ApiErrors(400, "invalid pharmacy id")
     }
 
-    // const session = await mongoose.startSession()
-    // session.startTransaction()
+    const session = await mongoose.startSession()
+    session.startTransaction()
 
     try {
         const reqPharmacy = await RequestPharmacy.findById(pharmacyId)
-        // .session(session)
+        .session(session)
 
         if (!reqPharmacy) {
             throw new ApiErrors(404, "pharmacy is not found in request")
@@ -361,7 +361,7 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
             contactNumber: reqPharmacy.contactNumber,
             location: reqPharmacy.location
         }]
-            // , { session }
+            , { session }
         )
 
         if (!pharmacy || pharmacy.length === 0) {
@@ -376,7 +376,7 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
             role: "pharmacyOwner",
             pharmacyId: pharmacy[0]._id
         }]
-            // , { session }
+            , { session }
         )
 
         if (!user || user.length === 0) {
@@ -392,11 +392,11 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
         }
 
         await reqPharmacy.deleteOne(
-            // { session }
+            { session }
         )
 
-        // await session.commitTransaction()
-        // session.endSession()
+        await session.commitTransaction()
+        session.endSession()
 
         await redis.del(`pharmacyReq:${pharmacyId}`)
         await redis.del("Request:pharmacy")
@@ -408,8 +408,8 @@ export const addPharmacy = AsyncHandler(async (req, res) => {
             )
 
     } catch (error) {
-        // await session.abortTransaction()
-        // session.endSession()
+        await session.abortTransaction()
+        session.endSession()
         throw error
     }
 })

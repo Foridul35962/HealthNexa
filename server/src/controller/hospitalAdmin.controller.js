@@ -444,8 +444,8 @@ export const addDoctor = [
             throw new ApiErrors(400, "There is no such department in hospital")
         }
 
-        // const session = await mongoose.startSession()
-        // session.startTransaction()
+        const session = await mongoose.startSession()
+        session.startTransaction()
 
         let upload
 
@@ -466,7 +466,7 @@ export const addDoctor = [
                 staffRole: "doctor",
                 hospitalId: admin.hospitalId
             }]
-                // , { session }
+                , { session }
             )
 
             const doctor = await Doctors.create([{
@@ -478,11 +478,11 @@ export const addDoctor = [
                 slotDuration,
                 hospitalId: admin.hospitalId
             }]
-                // , { session }
+                , { session }
             )
 
-            // await session.commitTransaction()
-            // session.endSession()
+            await session.commitTransaction()
+            session.endSession()
 
             const populatedDoctor = await Doctors.findById(doctor[0]._id)
                 .populate('userId')
@@ -496,8 +496,8 @@ export const addDoctor = [
             )
 
         } catch (err) {
-            // await session.abortTransaction()
-            // session.endSession()
+            await session.abortTransaction()
+            session.endSession()
             if (upload?.public_id) {
                 await cloudinary.uploader.destroy(upload.public_id)
             }
@@ -622,8 +622,8 @@ export const editDoctor = [
             }
         }
 
-        // const session = await mongoose.startSession();
-        // session.startTransaction();
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
         try {
             // Find doctor
@@ -631,7 +631,7 @@ export const editDoctor = [
                 _id: doctorId,
                 hospitalId: admin.hospitalId
             })
-            // .session(session);
+            .session(session);
 
             if (!doctor) {
                 throw new ApiErrors(404, 'Doctor not found');
@@ -661,7 +661,7 @@ export const editDoctor = [
 
             if (Object.keys(userUpdates).length > 0) {
                 await Users.findByIdAndUpdate(doctor.userId, userUpdates
-                    // , { session }
+                    , { session }
                 );
             }
 
@@ -685,12 +685,12 @@ export const editDoctor = [
 
             if (Object.keys(doctorUpdates).length > 0) {
                 await Doctors.findByIdAndUpdate(doctorId, doctorUpdates
-                    // , { session }
+                    , { session }
                 );
             }
 
-            // await session.commitTransaction();
-            // session.endSession();
+            await session.commitTransaction();
+            session.endSession();
 
             const populatedDoctor = await Doctors.findById(doctorId)
                 .populate('userId')
@@ -706,8 +706,8 @@ export const editDoctor = [
                 new ApiResponse(200, populatedDoctor, 'doctor updated successfully')
             );
         } catch (err) {
-            // await session.abortTransaction();
-            // session.endSession();
+            await session.abortTransaction();
+            session.endSession();
             throw new ApiErrors(500, 'Doctor update failed');
         }
     })
@@ -722,21 +722,21 @@ export const deleteDoctor = AsyncHandler(async (req, res) => {
         throw new ApiErrors(400, 'doctor id is required')
     }
 
-    // const session = await mongoose.startSession()
-    // session.startTransaction()
+    const session = await mongoose.startSession()
+    session.startTransaction()
 
     try {
         const doctor = await Doctors.findOne({
             _id: doctorId,
             hospitalId: admin.hospitalId
         })
-        // .session(session)
+        .session(session)
         if (!doctor) {
             throw new ApiErrors(404, 'Doctor not found')
         }
 
         const user = await Users.findById(doctor.userId)
-        // .session(session)
+        .session(session)
 
         await doctor.deleteOne()
 
@@ -745,8 +745,8 @@ export const deleteDoctor = AsyncHandler(async (req, res) => {
             await user.deleteOne()
         }
 
-        // await session.commitTransaction()
-        // session.endSession()
+        await session.commitTransaction()
+        session.endSession()
 
         if (user?.image?.publicId) {
             try {
@@ -767,8 +767,8 @@ export const deleteDoctor = AsyncHandler(async (req, res) => {
         )
 
     } catch (err) {
-        // await session.abortTransaction()
-        // session.endSession()
+        await session.abortTransaction()
+        session.endSession()
         throw new ApiErrors(500, 'Doctor deletion failed')
     }
 })
