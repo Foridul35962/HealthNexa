@@ -72,9 +72,12 @@ export default function Navbar() {
   const dashboardHref = DASHBOARD_HREF[effectiveRole] ?? "/dashboard";
   const roleLabel = ROLE_LABEL[effectiveRole] ?? role;
 
-  const visibleLinks = navLinks.filter(
-    (l) => !l.patientOnly || effectiveRole === "patient"
-  );
+  const visibleLinks = navLinks.filter((link) => {
+    if (!link.patientOnly) return true;
+    
+    if (!user) return true;
+    return effectiveRole === "patient";
+  });
 
   // ── auth area (desktop) ──────────────────────────────────────────────────
   const AuthArea = () => {
