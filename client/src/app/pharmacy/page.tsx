@@ -6,8 +6,8 @@ import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { motion } from 'framer-motion'
-import { 
-  LayoutDashboard, Pill, PackageCheck, AlertCircle, 
+import {
+  LayoutDashboard, Pill, PackageCheck, AlertCircle,
   TrendingUp, MapPin, Phone, Clock, ChevronRight, Store
 } from 'lucide-react'
 import Link from 'next/link'
@@ -62,7 +62,7 @@ const PharmacyDashboard = () => {
   ]
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="p-6 space-y-8 max-w-7xl mx-auto"
@@ -80,12 +80,12 @@ const PharmacyDashboard = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <LayoutDashboard className="text-indigo-600" /> 
+              <LayoutDashboard className="text-indigo-600" />
               {pharmacyInfo.name}
             </h1>
             <p className="text-slate-500 text-sm mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="flex items-center gap-1"><MapPin size={14}/> {pharmacyInfo.address.city}, {pharmacyInfo.address.street}</span>
-              <span className="flex items-center gap-1"><Phone size={14}/> {pharmacyInfo.contactNumber}</span>
+              <span className="flex items-center gap-1"><MapPin size={14} /> {pharmacyInfo.address.city}, {pharmacyInfo.address.street}</span>
+              <span className="flex items-center gap-1"><Phone size={14} /> {pharmacyInfo.contactNumber}</span>
             </p>
           </div>
         </div>
@@ -94,7 +94,7 @@ const PharmacyDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((item, idx) => (
-          <motion.div 
+          <motion.div
             key={idx}
             whileHover={{ y: -5 }}
             className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center gap-4"
@@ -141,10 +141,14 @@ const PharmacyDashboard = () => {
                     <td className="px-6 py-4 font-medium text-slate-700">{item.stock}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-indigo-600">৳{item.price - (item.discountPrice || 0)}</span>
                         {item.discountPrice ? (
-                          <span className="text-[10px] text-slate-400 line-through">৳{item.price}</span>
-                        ) : null}
+                          <>
+                            <span className="font-bold text-indigo-600">৳{item.discountPrice}</span>
+                            <span className="text-[10px] text-slate-400 line-through">৳{item.price}</span>
+                          </>
+                        ) : (
+                          <span className="font-bold text-indigo-600">৳{item.price}</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -165,7 +169,7 @@ const PharmacyDashboard = () => {
             <div className="relative z-10">
               <h3 className="text-lg font-bold mb-2">Shop Address</h3>
               <p className="text-indigo-100 text-sm leading-relaxed">
-                House: {pharmacyInfo.address.house}, {pharmacyInfo.address.street}<br/>
+                House: {pharmacyInfo.address.house}, {pharmacyInfo.address.street}<br />
                 {pharmacyInfo.address.city} - {pharmacyInfo.address.postalCode}
               </p>
               <div className="mt-6 flex items-center gap-2 text-xs text-indigo-200">
@@ -177,7 +181,7 @@ const PharmacyDashboard = () => {
           </div>
         </div>
       </div>
-    </motion.div>
+    </motion.div >
   )
 }
 
