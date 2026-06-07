@@ -11,6 +11,7 @@ import aiRouter from './routes/ai.route.js'
 import patientRoute from './routes/patient.route.js'
 import receptionistRoute from './routes/receptionist.route.js'
 import doctorRoute from './routes/doctor.route.js'
+import arcjetProtection from './middlewares/archetCheck.js'
 
 const app = express()
 
@@ -20,6 +21,9 @@ app.use(cors({
 }))
 
 app.use(cookieParser())
+
+//bot protection
+app.use(arcjetProtection)
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
